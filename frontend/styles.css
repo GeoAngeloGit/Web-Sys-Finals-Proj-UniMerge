@@ -1,0 +1,79 @@
+:root {
+  /* Colors */
+  --color-background-primary: #ffffff;
+  --color-background-secondary: #f8f9fa;
+  --color-background-info: #e7f1ff;
+  --color-background-success: #e6ffed;
+  
+  --color-text-primary: #212529;
+  --color-text-secondary: #6c757d;
+  --color-text-tertiary: #adb5bd;
+  --color-text-info: #0056b3;
+  --color-text-success: #1e7e34;
+  
+  --color-border-primary: #007bff;
+  --color-border-secondary: #dee2e6;
+  --color-border-tertiary: #e9ecef;
+  --color-border-info: #b8daff;
+  --color-border-success: #b7eb8f;
+  
+  /* Shapes */
+  --border-radius-md: 6px;
+  --border-radius-lg: 10px;
+  --font-mono: 'Courier New', Courier, monospace;
+}
+
+/* Optional: Add a subtle background to the wrap so cards "pop" */
+body {
+  background-color: #f0f2f5;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+* {
+    box-sizing:border-box;margin:0;padding:0
+}
+
+.wrap {
+    padding:1rem 0;
+    font-size:14px;
+    color:var(--color-text-primary);
+}
+
+.card {
+    background:var(--color-background-primary);
+    border:0.5px solid var(--color-border-tertiary);
+    border-radius:var(--border-radius-lg);
+    padding:1.25rem;
+    margin-bottom:12px
+}
+
+.label {
+    font-size:12px;
+    color:var(--color-text-secondary);
+    margin-bottom:6px;
+    font-weight:500
+}
+
+  .field-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px;margin-bottom:12px}
+  .field-group{display:flex;flex-direction:column}
+  input[type=text],input[type=email]{width:100%}
+  .var-section{margin-bottom:12px}
+  .var-pills{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+  .var-pill{font-size:12px;padding:4px 10px;border-radius:var(--border-radius-md);background:var(--color-background-info);color:var(--color-text-info);border:0.5px solid var(--color-border-info);cursor:pointer;transition:opacity .15s}
+  .var-pill:hover{opacity:.7}
+  .var-pill.used{background:var(--color-background-success);color:var(--color-text-success);border-color:var(--color-border-success)}
+  .editor-toolbar{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px}
+  .toolbar-btn{font-size:12px;padding:3px 8px;border-radius:var(--border-radius-md);background:var(--color-background-secondary);color:var(--color-text-secondary);border:0.5px solid var(--color-border-tertiary);cursor:pointer}
+  .toolbar-btn:hover{background:var(--color-background-primary);color:var(--color-text-primary)}
+  #bodyEditor{width:100%;min-height:180px;font-size:13px;font-family:var(--font-mono);resize:vertical;padding:10px;border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-md);background:var(--color-background-primary);color:var(--color-text-primary);line-height:1.6}
+  #bodyEditor:focus{outline:none;border-color:var(--color-border-primary)}
+  .preview-frame{background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-md);padding:20px;font-size:14px;line-height:1.7;color:var(--color-text-primary);min-height:100px}
+  .preview-var{background:#FAEEDA;color:#633806;border-radius:3px;padding:1px 4px;font-size:12px;font-weight:500}
+  .section-head{font-size:13px;font-weight:500;color:var(--color-text-primary);margin-bottom:10px}
+  .tab-row{display:flex;gap:4px;margin-bottom:12px}
+  .tab{font-size:12px;padding:4px 12px;border-radius:var(--border-radius-md);border:0.5px solid var(--color-border-tertiary);background:transparent;color:var(--color-text-secondary);cursor:pointer}
+  .tab.active{background:var(--color-background-secondary);color:var(--color-text-primary);border-color:var(--color-border-secondary)}
+  .hint{font-size:11px;color:var(--color-text-tertiary);margin-top:4px}
+  .counter{font-size:11px;color:var(--color-text-tertiary);text-align:right;margin-top:4px}
+  .divider{border:none;border-top:0.5px solid var(--color-border-tertiary);margin:12px 0}
+  .mock-badge{display:inline-block;font-size:11px;padding:2px 8px;border-radius:var(--border-radius-md);background:var(--color-background-secondary);color:var(--color-text-secondary);margin-right:6px}

@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mini Project</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <h2>Step 1: Sender Configuration</h2>
+        <input type="email" id="senderEmail" placeholder="Enter Gmail Address">
+        <input type="password" id="appPassword" placeholder="Enter App Password">
+        
+        <hr>
+        
+        <div>
+            <h2>Step 2: Compose Your Email</h2>
+
+            <input type="file" id="csvFile" accept=".csv, .xlsx">
+
+            <input type="file" id="zipFile" accept=".zip">
+            <button onclick="uploadFile()">Upload CSV</button>
+            <div id="uploadStatus"></div>
+            <div id="message"></div>
+        </div>
+    </div>
+
+    <hr>
+    
+    <div class="card" id="mappingCard" style="display:none;">
+        <div class="section-head">Data Mapping</div>
+        <p class="hint">Tell the system which columns to use for delivery.</p>
+        <div class="field-row">
+            <div class="field-group">
+            <div class="label">Recipient Email Column</div>
+            <select id="emailColSelect" class="toolbar-btn" style="width:100%; height:35px;"></select>
+            </div>
+            <div class="field-group">
+            <div class="label">Attachment Filename Column (Optional)</div>
+            <select id="attachmentColSelect" class="toolbar-btn" style="width:100%; height:35px;"></select>
+            </div>
+        </div>
+    </div>
+
+    <div class="wrap" id="composeSection" style="display:none;">
+        <div class="card">
+            <div class="section-head">Sample CSV headers (click to insert into body)</div>
+            <p class="hint" style="margin-bottom:8px">These come from your uploaded file. Click any variable to insert it at the cursor.</p>
+            <div class="var-pills" id="varPills"></div>
+        </div>
+
+        <div class="card">
+            <div class="section-head">Email details</div>
+            <div class="field-row">
+                <div class="field-group">
+                <div class="label">Subject line</div>
+                <input type="text" id="subjectField" placeholder="e.g. Your certificate for {{event_name}}" oninput="updatePreview()">
+                </div>
+                <div class="field-group">
+                <div class="label">Sender name (display)</div>
+                <input type="text" id="senderName" placeholder="e.g. Events Team" oninput="updatePreview()">
+                </div>
+            </div>
+            <div class="divider"></div>
+            <div class="section-head" style="margin-bottom:8px">Email body (HTML supported)</div>
+            <div class="tab-row">
+                <button class="tab active" onclick="switchTab('editor',this)">Editor</button>
+                <button class="tab" onclick="switchTab('preview',this)">Preview</button>
+            </div>
+            <div id="editorPane">
+                <div class="editor-toolbar">
+                    <button class="toolbar-btn" onclick="wrapTag('b')">B</button>
+                    <button class="toolbar-btn" onclick="wrapTag('i')"><i>I</i></button>
+                    <button class="toolbar-btn" onclick="wrapTag('u')"><u>U</u></button>
+                    <button class="toolbar-btn" onclick="insertSnippet('<br>')">↵ br</button>
+                    <button class="toolbar-btn" onclick="insertSnippet('<h2></h2>')">H2</button>
+                    <button class="toolbar-btn" onclick="insertSnippet('<p></p>')">P</button>
+                    <button class="toolbar-btn" onclick="insertSnippet('<a href=\'\'></a>')">Link</button>
+                    <button class="toolbar-btn" onclick="insertSnippet('<img src=\'\' style=\'max-width:100%\'>')">Img</button>
+                    <button class="toolbar-btn" onclick="loadTemplate()">Load template</button>
+                </div>
+                <textarea id="bodyEditor" oninput="updatePreview();updateCounter()" placeholder="Write your HTML email body here. Use {{variable}} to insert recipient data."></textarea>
+                <div class="counter" id="charCounter">0 characters</div>
+                <div class="hint">Tip: use {{variable_name}} anywhere — subject, body, or display name.</div>
+            </div>
+            <div id="previewPane" style="display:none">
+                <div class="label" style="margin-bottom:6px">Subject: <span id="previewSubject" style="color:var(--color-text-primary)"></span></div>
+                <div class="label" style="margin-bottom:10px">From: <span id="previewFrom" style="color:var(--color-text-primary)"></span></div>
+                <div class="preview-frame" id="previewBody"></div>
+                <div class="hint" style="margin-top:8px">Variables shown as <span class="preview-var">{{highlighted}}</span> — will be replaced with real data on send.</div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="section-head">Variables used in this template</div>
+            <div id="usedVarsList" style="font-size:13px;color:var(--color-text-secondary)">None yet — insert variables above.</div>
+        </div>
+    </div>
+<script src="script.js"></script>
+</body>
+</html>
