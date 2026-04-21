@@ -20,7 +20,7 @@
             <input type="file" id="csvFile" accept=".csv, .xlsx">
 
             <input type="file" id="zipFile" accept=".zip">
-            <button onclick="uploadFile()">Upload CSV</button>
+            <button type="button" onclick="uploadFile(event)">Upload CSV</button>
             <div id="uploadStatus"></div>
             <div id="message"></div>
         </div>
@@ -54,12 +54,12 @@
             <div class="section-head">Email details</div>
             <div class="field-row">
                 <div class="field-group">
-                <div class="label">Subject line</div>
-                <input type="text" id="subjectField" placeholder="e.g. Your certificate for {{event_name}}" oninput="updatePreview()">
+                    <div class="label">Subject line</>
+                    <input type="text" id="subjectField" placeholder="e.g. Your certificate for {{event_name}}" oninput="updatePreview()">
                 </div>
                 <div class="field-group">
-                <div class="label">Sender name (display)</div>
-                <input type="text" id="senderName" placeholder="e.g. Events Team" oninput="updatePreview()">
+                    <div class="label">Sender name (display)</div>
+                    <input type="text" id="senderName" placeholder="e.g. Events Team" oninput="updatePreview()">
                 </div>
             </div>
             <div class="divider"></div>
@@ -96,6 +96,21 @@
             <div class="section-head">Variables used in this template</div>
             <div id="usedVarsList" style="font-size:13px;color:var(--color-text-secondary)">None yet — insert variables above.</div>
         </div>
+
+        <div class="card" id="progressCard" style="display:none; margin-top: 20px;">
+            <div class="section-head">Delivery Status</div>
+            <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+                <thead>
+                    <tr style="text-align: left; border-bottom: 1px solid #ddd;">
+                        <th style="padding: 8px;">Recipient</th>
+                        <th style="padding: 8px;">Status</th>
+                    </tr>
+                </thead>
+                <tbody id="progressBody"></tbody>
+            </table>
+        </div>
+
+<button type="button" onclick="sendBulkEmails(event)" class="primary-btn">Start Bulk Send</button>
     </div>
 <script src="script.js"></script>
 </body>

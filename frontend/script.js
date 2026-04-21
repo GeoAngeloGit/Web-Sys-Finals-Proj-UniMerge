@@ -44,11 +44,15 @@ const bodyEditor = document.getElementById('bodyEditor');
 const subjectField = document.getElementById('subjectField');
 const senderName = document.getElementById('senderName');
 
-async function uploadFile() {
+let currentExtractDir = null;
+
+async function uploadFile(event) {
+    if (event) event.preventDefault();
+
     const csvInput = document.getElementById("csvFile");
     const zipInput = document.getElementById("zipFile"); // Add this ID to your HTML
 
-    if (!csvFile) {
+    if (!csvInput.files[0]) {
         document.getElementById("uploadStatus").textContent = "CSV file is required.";
         return;
     }
@@ -66,16 +70,25 @@ async function uploadFile() {
         const result = await response.json();
 
         if (result.success) {
+            currentSheetData = result.allRows; // Store the rows
+            currentExtractDir = result.extractDir;
             let message = "CSV uploaded successfully!";
             if (result.files.zipFile) {
                 message += " ZIP uploaded successfully!";
             }
             document.getElementById("uploadStatus").textContent = message;
 
-            initPills(result.headers); // Initialize the variable pills with the headers from the response
-            initMappingDropdowns(result.headers); // Initialize the mapping UI with the headers
-
-            document.getElementById("composeSection").style.display = "block"; // Show the mapping section
+            // Execute UI updates after a tiny delay for stability
+            setTimeout(() => {
+                initPills(result.headers);
+                initMappingDropdowns(result.headers);
+                
+                // Show the sections
+                document.getElementById("composeSection").style.display = "block";
+                // Ensure this ID exists in your HTML!
+                const mappingCard = document.getElementById("mappingCard");
+                if (mappingCard) mappingCard.style.display = "block";
+            }, 100);
 
         } else {
             document.getElementById("uploadStatus").textContent = "Failed to upload file.";
@@ -209,4 +222,71 @@ function initMappingDropdowns(headers) {
     // Show the card
     document.getElementById('mappingCard').style.display = 'block';
     document.getElementById('composeSection').style.display = 'block';
+}
+
+// Variable to store the headers/data from the upload step
+let currentSheetData = []; 
+
+async function sendBulkEmails(event) {
+    if (event) event.preventDefault();
+    
+    const emailCol = document.getElementById('emailColSelect').value;
+    const progressCard = document.getElementById('progressCard');
+    const progressBody = document.getElementById('progressBody');
+    
+    if (!emailCol) return alert("Select the Email Column first!");
+
+    progressCard.style.display = 'block';
+    progressBody.innerHTML = ''; // Clear previous runs
+
+    // Loop through every row of data we got from Phase 2
+    for (const row of currentSheetData) {
+        const email = row[emailCol];
+        
+        // 1. Create a new row in the UI table
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td style="padding: 8px; border-bottom: 1px solid #eee;">${email}</td>
+            <td class="status-cell" style="padding: 8px; border-bottom: 1px solid #eee; color: orange;">Sending...</td>
+        `;
+        progressBody.appendChild(tr);
+        const statusCell = tr.querySelector('.status-cell');
+
+        // 2. Prepare the data for THIS specific email
+        const payload = {
+            auth: {
+                user: document.getElementById("senderEmail").value,
+                pass: document.getElementById("appPassword").value
+            },
+            recipient: email,
+            subject: document.getElementById("subjectField").value,
+            body: document.getElementById("bodyEditor").value,
+            senderName: document.getElementById("senderName").value,
+            rowData: row // Pass the whole row so backend can replace {{variables}}
+        };
+
+        try {
+            const response = await fetch("http://localhost:3000/notify", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload)
+            });
+            const result = await response.json();
+
+            // 3. Update the status for this specific row
+            if (result.success) {
+                statusCell.textContent = "✅ Success";
+                statusCell.style.color = "green";
+            } else {
+                statusCell.textContent = "❌ Failed";
+                statusCell.style.color = "red";
+            }
+        } catch (err) {
+            statusCell.textContent = "⚠️ Error";
+            statusCell.style.color = "red";
+        }
+
+        // 4. Rate Limiting: Wait 1.5 seconds so Gmail doesn't block you
+        await new Promise(resolve => setTimeout(resolve, 1500));
+    }
 }

@@ -11,6 +11,9 @@ const app = express();
 const PORT = 3000;
 const uploadDir = path.join(process.cwd(), "uploads");
 
+// This tells Express to serve all files in the current folder as static assets
+app.use(express.static(process.cwd()));
+
 const storage = multer.diskStorage({
     destination(req, file, cb) {
         fs.mkdirSync(uploadDir, { recursive: true });
@@ -45,14 +48,19 @@ app.post("/process-files", upload.fields([
         const excelFile = XLSX.readFile(csvFile.path);
         const sheetName = excelFile.SheetNames[0];
         const worksheet = excelFile.Sheets[sheetName];
-        const data = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
-        const headers = data[0]; // This is your array of column names!
-        console.log("Extracted Headers:", data[0]); // Log the headers for debugging
 
+        const rawData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+        const headers = rawData[0]; 
+
+        // 2. NEW: Get all rows as objects for the sending loop
+        const allRows = XLSX.utils.sheet_to_json(worksheet); 
+
+        let extractDir = null;
         if(zipFile) {
             const zip = new AdmZip(zipFile.path);
             //create a new unique folder for the extracted content
-            const extractDir = path.join(uploadDir, `${Date.now()}-extracted`);
+            const folderName = `${Date.now()}-extracted`;
+            extractDir = path.join(uploadDir, folderName);
 
             //extract everything to that folder
             zip.extractAllTo(extractDir, true);
@@ -63,10 +71,12 @@ app.post("/process-files", upload.fields([
         res.status(200).json({
             success: true,
             message: zipFile ? "CSV and ZIP uploaded." : "CSV uploaded (No ZIP).",
-            headers: headers, // Send the headers back to the frontend
+            headers: headers,    // For the UI buttons
+            allRows: allRows,    // NEW: For the sending loop
+            extractDir: extractDir, // NEW: So frontend knows where files are
             files: {
                 csvFile: csvFile.filename,
-                zipFile: zipFile ? zipFile.filename : null, // Handle the optional case
+                zipFile: zipFile ? zipFile.filename : null,
             },
         });
     } catch (error) {
@@ -78,34 +88,36 @@ app.post("/process-files", upload.fields([
 });
 
 app.post("/notify", async (req, res) => {
-
-    const { senderEmail, appPassword, recipientEmail, subject, message } = req.body;
-
-    const transporter = createTransport({
-        host: "smtp.gmail.com",
-        port: 465, //port of SMTP dont change
-        secure: true, // use STARTTLS (upgrade connection to TLS after connecting)
-        //authenticate the email of the sender
-        auth: {
-            user: senderEmail, //email address of the sender
-            pass: appPassword, //app password of the gmail address
-        },
-    });
+    const { auth, recipient, subject, body, senderName, rowData } = req.body;
 
     try {
-        await transporter.sendMail({
-            from: senderEmail, // sender address
-            to: recipientEmail, // list of recipients
-            subject: subject, // subject line
-            text: message, // plain text body
+        const transporter = createTransport({
+            service: "gmail",
+            auth: { user: auth.user, pass: auth.pass }
         });
 
-        res.status(200).send({ success: true, message: "Email sent successfully!" });
-        } 
-        catch (err) {
-            console.error("Error while sending mail:", err);
-            res.status(500).send({ success: false, message: "Failed to send email." });
-        }
+        // Personalize the Body and Subject using rowData
+        let finalBody = body;
+        let finalSubject = subject;
+        
+        Object.keys(rowData).forEach(key => {
+            const placeholder = new RegExp(`{{${key}}}`, 'g');
+            finalBody = finalBody.replace(placeholder, rowData[key]);
+            finalSubject = finalSubject.replace(placeholder, rowData[key]);
+        });
+
+        await transporter.sendMail({
+            from: `"${senderName}" <${auth.user}>`,
+            to: recipient,
+            subject: finalSubject,
+            html: finalBody
+        });
+
+        res.status(200).json({ success: true });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ success: false, message: error.message });
+    }
 });
 
 
