@@ -242,7 +242,8 @@ async function sendBulkEmails(event) {
     // Loop through every row of data we got from Phase 2
     for (const row of currentSheetData) {
         const email = row[emailCol];
-        
+        const attachmentCol = document.getElementById('attachmentColSelect').value;
+
         // 1. Create a new row in the UI table
         const tr = document.createElement('tr');
         tr.innerHTML = `
@@ -262,7 +263,9 @@ async function sendBulkEmails(event) {
             subject: document.getElementById("subjectField").value,
             body: document.getElementById("bodyEditor").value,
             senderName: document.getElementById("senderName").value,
-            rowData: row // Pass the whole row so backend can replace {{variables}}
+            rowData: row, // Pass the whole row so backend can replace {{variables}}
+            extractDir: currentExtractDir, // Send the ZIP extraction path
+            attachmentFileName: row[attachmentCol] // Send the name from the Excel row
         };
 
         try {

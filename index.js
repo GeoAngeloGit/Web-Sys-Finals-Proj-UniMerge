@@ -88,7 +88,7 @@ app.post("/process-files", upload.fields([
 });
 
 app.post("/notify", async (req, res) => {
-    const { auth, recipient, subject, body, senderName, rowData } = req.body;
+    const { auth, recipient, subject, body, senderName, rowData, extractDir, attachmentFileName } = req.body;
 
     try {
         const transporter = createTransport({
@@ -106,13 +106,30 @@ app.post("/notify", async (req, res) => {
             finalSubject = finalSubject.replace(placeholder, rowData[key]);
         });
 
-        await transporter.sendMail({
+        const mailOptions = {
             from: `"${senderName}" <${auth.user}>`,
             to: recipient,
             subject: finalSubject,
-            html: finalBody
-        });
+            html: finalBody,
+            attachments: [] // Initialize empty
+        };
 
+        // NEW: Attachment Path Matching
+        if (extractDir && attachmentFileName) {
+            // We assume the files are PDFs. Adjust if they are images!
+            const filePath = path.join(extractDir, `${attachmentFileName}`);
+            
+            if (fs.existsSync(filePath)) {
+                mailOptions.attachments.push({
+                    filename: `${attachmentFileName}`,
+                    path: filePath
+                });
+            } else {
+                console.warn(`File not found: ${filePath}`);
+            }
+        }
+
+        await transporter.sendMail(mailOptions);
         res.status(200).json({ success: true });
     } catch (error) {
         console.error(error);
