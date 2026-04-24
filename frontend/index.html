@@ -99,6 +99,11 @@
 
         <div class="card" id="progressCard" style="display:none; margin-top: 20px;">
             <div class="section-head">Delivery Status</div>
+            
+            <div id="overallCounter" style="padding: 0 8px 10px 8px; font-weight: bold; color: var(--color-text-secondary); font-size: 14px;">
+                Ready to send...
+            </div>
+
             <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
                 <thead>
                     <tr style="text-align: left; border-bottom: 1px solid #ddd;">
@@ -110,7 +115,7 @@
             </table>
         </div>
 
-<button type="button" onclick="sendBulkEmails(event)" class="primary-btn">Start Bulk Send</button>
+        <button type="button" onclick="sendBulkEmails(event)" class="primary-btn">Start Bulk Send</button>
     </div>
 <script src="script.js"></script>
 </body>

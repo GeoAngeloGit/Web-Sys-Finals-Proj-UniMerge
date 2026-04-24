@@ -231,20 +231,25 @@ async function sendBulkEmails(event) {
     if (event) event.preventDefault();
     
     const emailCol = document.getElementById('emailColSelect').value;
-    const progressCard = document.getElementById('progressCard');
     const progressBody = document.getElementById('progressBody');
+
+    const BATCH_SIZE = 20; // Set your batch size here
+    const LONG_DELAY = 60000; // 60 seconds in milliseconds
+    const SHORT_DELAY = 2000; // 2 seconds between emails
+
+    // Show the progress card and clear previous results
+    const total = currentSheetData.length;
+    const counterEl = document.getElementById('overallCounter');
+    document.getElementById('progressCard').style.display = 'block';
+    progressBody.innerHTML = ''; 
     
-    if (!emailCol) return alert("Select the Email Column first!");
 
-    progressCard.style.display = 'block';
-    progressBody.innerHTML = ''; // Clear previous runs
-
-    // Loop through every row of data we got from Phase 2
-    for (const row of currentSheetData) {
+    // Loop through each row of the current sheet data
+    for (let i = 0; i < currentSheetData.length; i++) {
+        const row = currentSheetData[i];
         const email = row[emailCol];
-        const attachmentCol = document.getElementById('attachmentColSelect').value;
-
-        // 1. Create a new row in the UI table
+        
+        // 1. UI: Create row and set to "Sending..."
         const tr = document.createElement('tr');
         tr.innerHTML = `
             <td style="padding: 8px; border-bottom: 1px solid #eee;">${email}</td>
@@ -253,7 +258,7 @@ async function sendBulkEmails(event) {
         progressBody.appendChild(tr);
         const statusCell = tr.querySelector('.status-cell');
 
-        // 2. Prepare the data for THIS specific email
+        // 2. Prepare Payload
         const payload = {
             auth: {
                 user: document.getElementById("senderEmail").value,
@@ -263,11 +268,12 @@ async function sendBulkEmails(event) {
             subject: document.getElementById("subjectField").value,
             body: document.getElementById("bodyEditor").value,
             senderName: document.getElementById("senderName").value,
-            rowData: row, // Pass the whole row so backend can replace {{variables}}
-            extractDir: currentExtractDir, // Send the ZIP extraction path
-            attachmentFileName: row[attachmentCol] // Send the name from the Excel row
+            rowData: row,
+            extractDir: currentExtractDir,
+            attachmentFileName: row[document.getElementById('attachmentColSelect').value]
         };
 
+        // 3. Send Email
         try {
             const response = await fetch("http://localhost:3000/notify", {
                 method: "POST",
@@ -275,21 +281,57 @@ async function sendBulkEmails(event) {
                 body: JSON.stringify(payload)
             });
             const result = await response.json();
-
-            // 3. Update the status for this specific row
-            if (result.success) {
-                statusCell.textContent = "✅ Success";
-                statusCell.style.color = "green";
-            } else {
-                statusCell.textContent = "❌ Failed";
-                statusCell.style.color = "red";
-            }
+            statusCell.textContent = result.success ? "✅ Success" : "❌ Failed";
+            statusCell.style.color = result.success ? "green" : "red";
         } catch (err) {
             statusCell.textContent = "⚠️ Error";
-            statusCell.style.color = "red";
         }
 
-        // 4. Rate Limiting: Wait 1.5 seconds so Gmail doesn't block you
-        await new Promise(resolve => setTimeout(resolve, 1500));
+        
+
+        // 4. BATCH LOGIC
+        const count = i + 1; // Current number of emails processed
+        const isLastEmail = count === currentSheetData.length;
+
+        // if (!isLastEmail) {
+        //     if (count % BATCH_SIZE === 0) {
+        //         // End of a batch! Wait 60 seconds
+        //         console.log(`Batch of ${BATCH_SIZE} reached. Waiting 60 seconds...`);
+                
+        //         // Optional UI update to show the pause
+        //         const pauseMsg = document.createElement('tr');
+        //         pauseMsg.innerHTML = `<td colspan="2" style="text-align:center; background:#f9f9f9; font-style:italic;">Batch limit reached. Cooling down for 60s...</td>`;
+        //         progressBody.appendChild(pauseMsg);
+
+        //         await new Promise(resolve => setTimeout(resolve, LONG_DELAY));
+        //         pauseMsg.remove(); // Remove the message when moving to next batch
+        //     } else {
+        //         // Just a normal individual delay
+        //         await new Promise(resolve => setTimeout(resolve, SHORT_DELAY));
+        //     }
+        // }
+
+        counterEl.textContent = `Processing: ${count} of ${total} emails sent...`;
+        // 5. Update Counter, show the break message if needed, and continue to next email
+        if (count % BATCH_SIZE === 0) {
+            // 1. Create a special "Pause Row"
+            const pauseMsg = document.createElement('tr');
+            pauseMsg.id = "pauseRow"; // ID so we can find and remove it later
+            pauseMsg.innerHTML = `
+                <td colspan="2" style="text-align:center; background:#fff3cd; color: #856404; padding: 10px; font-style:italic;">
+                    ☕ Batch limit reached. Cooling down for 60 seconds to prevent spam flags...
+                </td>
+            `;
+            progressBody.appendChild(pauseMsg);
+
+            // 2. Wait for the 60 seconds
+            await new Promise(resolve => setTimeout(resolve, LONG_DELAY));
+
+            // 3. Remove the message and continue
+            pauseMsg.remove();
+        }
     }
+    counterEl.textContent = `Completed: All ${total} emails processed.`;
+    counterEl.style.color = "green";
+    alert("Bulk sending process completed!");
 }
