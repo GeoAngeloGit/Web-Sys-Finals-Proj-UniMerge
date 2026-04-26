@@ -6,6 +6,7 @@ import fs from "fs";
 import path from "path";
 import XLSX from 'xlsx';
 import AdmZip from "adm-zip";
+import { v4 as uuidv4 } from "uuid";
 
 const app = express();
 const PORT = 3000;
@@ -14,15 +15,21 @@ const uploadDir = path.join(process.cwd(), "uploads");
 // This tells Express to serve all files in the current folder as static assets
 app.use(express.static(process.cwd()));
 
+let sessionFolders = {}; // Track which files belong to which session
+
 const storage = multer.diskStorage({
     destination(req, file, cb) {
-        fs.mkdirSync(uploadDir, { recursive: true });
-        cb(null, uploadDir);
+        // Create a unique folder for THIS specific upload session
+        const sessionId = req.headers['x-session-id'] || uuidv4();
+        const sessionPath = path.join(uploadDir, sessionId);
+        
+        if (!fs.existsSync(sessionPath)) {
+            fs.mkdirSync(sessionPath, { recursive: true });
+        }
+        cb(null, sessionPath);
     },
     filename(req, file, cb) {
-        const ext = path.extname(file.originalname);
-        const base = path.basename(file.originalname, ext);
-        cb(null, `${Date.now()}-${base}${ext}`);
+        cb(null, `${Date.now()}-${file.originalname}`);
     },
 });
 
@@ -134,6 +141,31 @@ app.post("/notify", async (req, res) => {
     } catch (error) {
         console.error(error);
         res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+app.post("/cleanup", (req, res) => {
+    const { extractDir } = req.body;
+
+    if (!extractDir) {
+        return res.status(400).json({ success: false, message: "No directory provided." });
+    }
+
+    try {
+        // Find the parent session folder
+        const sessionFolder = path.dirname(extractDir);
+
+        if (fs.existsSync(sessionFolder)) {
+            // Delete the entire folder and everything inside
+            fs.rmSync(sessionFolder, { recursive: true, force: true });
+            console.log(`Cleaned up session folder: ${sessionFolder}`);
+            res.json({ success: true, message: "Session data wiped successfully." });
+        } else {
+            res.status(404).json({ success: false, message: "Folder not found." });
+        }
+    } catch (error) {
+        console.error("Cleanup Error:", error);
+        res.status(500).json({ success: false, message: "Failed to delete files." });
     }
 });
 

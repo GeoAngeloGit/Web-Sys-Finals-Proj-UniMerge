@@ -101,52 +101,52 @@ async function uploadFile(event) {
 
 //create the buttons of headers from the extracted excel or csv files
 function initPills(headers){
-  varPillsEl.innerHTML = '';
-  headers.forEach (h => {
-    const btn = document.createElement('button');
-    btn.className = 'var-pill';
-    btn.textContent = '{{'+h+'}}';
-    btn.dataset.key = h;
-    btn.onclick = () => insertVar('{{'+h+'}}',btn);
-    varPillsEl.appendChild(btn);
-  });
+    varPillsEl.innerHTML = '';
+    headers.forEach (h => {
+        const btn = document.createElement('button');
+        btn.className = 'var-pill';
+        btn.textContent = '{{'+h+'}}';
+        btn.dataset.key = h;
+        btn.onclick = () => insertVar('{{'+h+'}}',btn);
+        varPillsEl.appendChild(btn);
+    });
 }
 
 //insert the name of the header in the botton
 function insertVar(v, btn){
-  const ta = bodyEditor;
-  const s = ta.selectionStart, e=ta.selectionEnd;
-  ta.value = ta.value.slice(0,s)+v+ta.value.slice(e);
-  ta.selectionStart = ta.selectionEnd=s+v.length;
-  ta.focus();
-  updatePreview();
-  updateCounter();
+    const ta = bodyEditor;
+    const s = ta.selectionStart, e=ta.selectionEnd;
+    ta.value = ta.value.slice(0,s)+v+ta.value.slice(e);
+    ta.selectionStart = ta.selectionEnd=s+v.length;
+    ta.focus();
+    updatePreview();
+    updateCounter();
 }
 
 //
 function wrapTag(tag){
-  const ta = bodyEditor;
-  const s = ta.selectionStart, e=ta.selectionEnd;
-  const sel = ta.value.slice(s,e) || 'text';
-  const wrapped = `<${tag}>${sel}</${tag}>`;
-  ta.value = ta.value.slice(0,s) + wrapped+ta.value.slice(e);
-  ta.selectionStart = s; 
-  ta.selectionEnd = s + wrapped.length;
-  ta.focus();
-  updatePreview();
+    const ta = bodyEditor;
+    const s = ta.selectionStart, e=ta.selectionEnd;
+    const sel = ta.value.slice(s,e) || 'text';
+    const wrapped = `<${tag}>${sel}</${tag}>`;
+    ta.value = ta.value.slice(0,s) + wrapped+ta.value.slice(e);
+    ta.selectionStart = s; 
+    ta.selectionEnd = s + wrapped.length;
+    ta.focus();
+    updatePreview();
 }
 
 function insertSnippet(snip){
-  const ta = bodyEditor;
-  const s = ta.selectionStart;
-  ta.value = ta.value.slice(0,s) + snip + ta.value.slice(s);
-  ta.selectionStart = ta.selectionEnd = s + snip.length;
-  ta.focus();
-  updatePreview();
+    const ta = bodyEditor;
+    const s = ta.selectionStart;
+    ta.value = ta.value.slice(0,s) + snip + ta.value.slice(s);
+    ta.selectionStart = ta.selectionEnd = s + snip.length;
+    ta.focus();
+    updatePreview();
 }
 
 function loadTemplate(){
-  const t = `<p>Dear {{nickname}},</p>
+    const t = `<p>Dear {{nickname}},</p>
 
 <p>Congratulations on completing <b>{{event_name}}</b>!</p>
 
@@ -155,51 +155,51 @@ function loadTemplate(){
 <p>Your certificate ID is: <b>{{certificate_id}}</b></p>
 
 <p>Best regards,<br>The Events Team</p>`;
-  bodyEditor.value = t;
-  subjectField.value = 'Your e-certificate for {{event_name}}';
-  senderName.value = 'Events Team';
-  updatePreview();
-  updateCounter();
+    bodyEditor.value = t;
+    subjectField.value = 'Your e-certificate for {{event_name}}';
+    senderName.value = 'Events Team';
+    updatePreview();
+    updateCounter();
 }
 
 function highlightVars(text){
-  return text.replace(/{{([\w_]+)}}/g,'<span class="preview-var">{{$1}}</span>');
+    return text.replace(/{{([\w_]+)}}/g,'<span class="preview-var">{{$1}}</span>');
 }
 
 function updatePreview(){
-  const body = bodyEditor.value;
-  const subj = subjectField.value;
-  const from = senderName.value;
-  
-  document.getElementById('previewSubject').innerHTML = highlightVars(subj)||'<span style="color:var(--color-text-tertiary)">(no subject)</span>';
-  document.getElementById('previewFrom').textContent = from||'(sender name)';
-  document.getElementById('previewBody').innerHTML = highlightVars(body)||'<span style="color:var(--color-text-tertiary)">(empty body)</span>';
-  
-  const allText = body + ' ' + subj;
-  const found = [...new Set([...allText.matchAll(/{{([\w_]+)}}/g)].map(m=>m[1]))];
-  const usedEl = document.getElementById('usedVarsList');
-  if(found.length===0){
-    usedEl.textContent = 'None yet — insert variables above.';
-  } 
-  else {
-    usedEl.innerHTML = found.map(v=>`<span class="mock-badge">{{${v}}}</span>`).join('');
-  }
-  document.querySelectorAll('.var-pill').forEach(p => {
-    const key = p.dataset.key;
-    p.classList.toggle('used', found.includes(key));
-  });
+    const body = bodyEditor.value;
+    const subj = subjectField.value;
+    const from = senderName.value;
+    
+    document.getElementById('previewSubject').innerHTML = highlightVars(subj)||'<span style="color:var(--color-text-tertiary)">(no subject)</span>';
+    document.getElementById('previewFrom').textContent = from||'(sender name)';
+    document.getElementById('previewBody').innerHTML = highlightVars(body)||'<span style="color:var(--color-text-tertiary)">(empty body)</span>';
+    
+    const allText = body + ' ' + subj;
+    const found = [...new Set([...allText.matchAll(/{{([\w_]+)}}/g)].map(m=>m[1]))];
+    const usedEl = document.getElementById('usedVarsList');
+    if(found.length===0){
+        usedEl.textContent = 'None yet — insert variables above.';
+    } 
+    else {
+        usedEl.innerHTML = found.map(v=>`<span class="mock-badge">{{${v}}}</span>`).join('');
+    }
+    document.querySelectorAll('.var-pill').forEach(p => {
+        const key = p.dataset.key;
+        p.classList.toggle('used', found.includes(key));
+    });
 }
 
 function updateCounter(){
-  document.getElementById('charCounter').textContent = bodyEditor.value.length + ' characters';
+    document.getElementById('charCounter').textContent = bodyEditor.value.length + ' characters';
 }
 
 function switchTab(tab,btn){
-  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-  btn.classList.add('active');
-  document.getElementById('editorPane').style.display = tab==='editor'?'block':'none';
-  document.getElementById('previewPane').style.display = tab==='preview'?'block':'none';
-  if(tab ==='preview') updatePreview();
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('editorPane').style.display = tab==='editor'?'block':'none';
+    document.getElementById('previewPane').style.display = tab==='preview'?'block':'none';
+    if(tab ==='preview') updatePreview();
 }
 
 function initMappingDropdowns(headers) {
@@ -333,5 +333,36 @@ async function sendBulkEmails(event) {
     }
     counterEl.textContent = `Completed: All ${total} emails processed.`;
     counterEl.style.color = "green";
+
+    document.getElementById("finishSection").style.display = "block";
+
     alert("Bulk sending process completed!");
+}
+
+// to clear the session and delete all uploaded files from the server cache
+async function finishSession() {
+    if (!confirm("Are you sure? This will delete all uploaded files and clear your session data.")) return;
+
+    try {
+        await fetch("http://localhost:3000/cleanup", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ extractDir: currentExtractDir })
+        });
+
+        // Clear all sensitive global variables
+        currentSheetData = [];
+        currentExtractDir = null;
+        document.getElementById("senderEmail").value = "";
+        document.getElementById("appPassword").value = "";
+        
+        // Reset UI
+        document.getElementById("composeSection").style.display = "none";
+        document.getElementById("mappingCard").style.display = "none";
+        document.getElementById("uploadStatus").textContent = "Session cleared. Files deleted.";
+        
+        alert("Cleanup complete. All data has been wiped from the server cache.");
+    } catch (error) {
+        console.error("Cleanup failed:", error);
+    }
 }
