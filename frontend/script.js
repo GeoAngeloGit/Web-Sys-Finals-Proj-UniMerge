@@ -304,9 +304,11 @@ function sanitizeEmailHTML(rawHTML) {
 
 // Variable to store the headers/data from the upload step
 let currentSheetData = []; 
+let failedRecords = []; // To track failed email attempts for retrying later
 
 async function sendBulkEmails(event) {
     if (event) event.preventDefault();
+    failedRecords = []; // Reset failed records at the start of each send attempt
 
     if (!document.getElementById("emailColSelect").value) {
         alert("Please map the Recipient Email Column.");
@@ -376,10 +378,20 @@ async function sendBulkEmails(event) {
                 body: JSON.stringify(payload)
             });
             const result = await response.json();
-            statusCell.textContent = result.success ? "✅ Success" : "❌ Failed";
-            statusCell.style.color = result.success ? "green" : "red";
+
+            if(result.success) {
+                statusCell.textContent = "✅ Success";
+                statusCell.style.color = "green";
+            } else {
+                statusCell.textContent = "❌ Failed";
+                statusCell.style.color = "red";
+                failedRecords.push({ ...row, Error_Reason: result.message || 'SMTP Reject' });
+                document.getElementById('downloadFailedBtn').style.display = 'inline-block';
+            }
         } catch (err) {
             statusCell.textContent = "⚠️ Error";
+            failedRecords.push({ row, Error_Reason: err.message || 'Network/Server Error' });
+            document.getElementById('downloadFailedBtn').style.display = 'inline-block';
         }
 
         
@@ -422,6 +434,38 @@ async function sendBulkEmails(event) {
 
     alert("Bulk sending process completed!");
 }
+
+function downloadFailedCSV() {
+    if (failedRecords.length === 0) {
+        alert("No failed records to download. All emails were sent successfully!");
+        return;
+    }
+
+    // Get headers from the first failed record (assuming all have the same structure)
+    const headers = Object.keys(failedRecords[0]);  
+
+    // Create CSV content
+    const csvRows = [
+        headers.join(','), // Header row
+        ...failedRecords.map(record => 
+            headers.map(header => {
+                let value = record[header] === null || record[header] === undefined ? "" : String(record[header]);
+                return `"${value.replace(/"/g, '""')}"`; // Wraps values in quotes to handle commas within cells
+            }).join(',')
+        )
+    ].join('\n');
+
+    // Create a Blob and trigger download
+    const blob = new Blob([csvRows], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `failed_emails_1_${Date.now()}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
 
 // to clear the session and delete all uploaded files from the server cache
 async function finishSession() {

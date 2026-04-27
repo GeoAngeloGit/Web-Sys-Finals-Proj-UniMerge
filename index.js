@@ -157,7 +157,14 @@ app.post("/notify", async (req, res) => {
             }
         }
 
-        await transporter.sendMail(mailOptions);
+        const info = await transporter.sendMail(mailOptions);
+
+        if(info.rejected.length > 0) {
+            return res.status(400).json({ 
+                success: false, 
+                message: `Email rejected by SMTP server: ${info.rejected.join(', ')}` });
+        }
+        
         res.status(200).json({ success: true });
     } catch (error) {
         console.error(error);
