@@ -9,20 +9,20 @@
 <body>
     <div class="container">
         <h2>Step 1: Sender Configuration</h2>
-        <input type="email" id="senderEmail" placeholder="Enter Gmail Address">
-        <input type="password" id="appPassword" placeholder="Enter App Password">
+        <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+            <input type="email" id="senderEmail" placeholder="Enter Gmail Address" style="flex: 2;">
+            <input type="password" id="appPassword" placeholder="Enter App Password" style="flex: 2;">
+            <button type="button" id="verifyBtn" onclick="verifyCredentials()" class="toolbar-btn" style="flex: 1;">Verify Connection</button>
+        </div>
         
         <hr>
         
         <div>
             <h2>Step 2: Compose Your Email</h2>
-
             <input type="file" id="csvFile" accept=".csv, .xlsx">
-
             <input type="file" id="zipFile" accept=".zip">
-            <button type="button" onclick="uploadFile(event)">Upload CSV</button>
+            <button type="button" id="uploadBtn" onclick="uploadFile(event)" disabled title="Please verify credentials first">Upload CSV</button>
             <div id="uploadStatus"></div>
-            <div id="message"></div>
         </div>
     </div>
 
@@ -62,57 +62,75 @@
                     <input type="text" id="senderName" placeholder="e.g. Events Team" oninput="updatePreview()">
                 </div>
             </div>
+
             <div class="divider"></div>
+
             <div class="section-head" style="margin-bottom:8px">Email body (HTML supported)</div>
-            <div class="tab-row">
-                <button class="tab active" onclick="switchTab('editor',this)">Editor</button>
-                <button class="tab" onclick="switchTab('preview',this)">Preview</button>
-            </div>
-            <div id="editorPane">
-                <div class="editor-toolbar">
-                    <button class="toolbar-btn" onclick="wrapTag('b')">B</button>
-                    <button class="toolbar-btn" onclick="wrapTag('i')"><i>I</i></button>
-                    <button class="toolbar-btn" onclick="wrapTag('u')"><u>U</u></button>
-                    <button class="toolbar-btn" onclick="insertSnippet('<br>')">↵ br</button>
-                    <button class="toolbar-btn" onclick="insertSnippet('<h2></h2>')">H2</button>
-                    <button class="toolbar-btn" onclick="insertSnippet('<p></p>')">P</button>
-                    <button class="toolbar-btn" onclick="insertSnippet('<a href=\'\'></a>')">Link</button>
-                    <button class="toolbar-btn" onclick="insertSnippet('<img src=\'\' style=\'max-width:100%\'>')">Img</button>
-                    <button class="toolbar-btn" onclick="loadTemplate()">Load template</button>
+
+            <div class="split-editor-container" style="display: flex; gap: 20px; min-height: 500px;">
+                
+                <div id="editorPane" style="flex: 1; display: flex; flex-direction: column;">
+                    <div class="editor-toolbar">
+                        <button class="toolbar-btn" onclick="wrapTag('b')">B</button>
+                        <button class="toolbar-btn" onclick="wrapTag('i')"><i>I</i></button>
+                        <button class="toolbar-btn" onclick="wrapTag('u')"><u>U</u></button>
+                        <button class="toolbar-btn" onclick="insertSnippet('<br>')">↵ br</button>
+                        <button class="toolbar-btn" onclick="insertSnippet('<h2></h2>')">H2</button>
+                        <button class="toolbar-btn" onclick="insertSnippet('<p></p>')">P</button>
+                        <button class="toolbar-btn" onclick="insertSnippet('<a href=\'\'></a>')">Link</button>
+                        <button class="toolbar-btn" onclick="insertSnippet('<img src=\'\' style=\'max-width:100%\'>')">Img</button>
+                        <button class="toolbar-btn" onclick="loadTemplate()">Load template</button>
+                    </div>
+                    <textarea id="bodyEditor" style="flex: 1; min-height: 400px;" oninput="updatePreview();updateCounter()" placeholder="Write your HTML email body here. Use {{variable}} to insert recipient data."></textarea>
+                    <div class="counter" id="charCounter">0 characters</div>
+                    <div class="hint">Tip: use {{variable_name}} anywhere.</div>
                 </div>
-                <textarea id="bodyEditor" oninput="updatePreview();updateCounter()" placeholder="Write your HTML email body here. Use {{variable}} to insert recipient data."></textarea>
-                <div class="counter" id="charCounter">0 characters</div>
-                <div class="hint">Tip: use {{variable_name}} anywhere — subject, body, or display name.</div>
-            </div>
-            <div id="previewPane" style="display:none">
-                <div class="label" style="margin-bottom:6px">Subject: <span id="previewSubject" style="color:var(--color-text-primary)"></span></div>
-                <div class="label" style="margin-bottom:10px">From: <span id="previewFrom" style="color:var(--color-text-primary)"></span></div>
-                <div class="preview-frame" id="previewBody"></div>
-                <div class="hint" style="margin-top:8px">Variables shown as <span class="preview-var">{{highlighted}}</span> — will be replaced with real data on send.</div>
-            </div>
-        </div>
 
-        <div class="card">
-            <div class="section-head">Variables used in this template</div>
-            <div id="usedVarsList" style="font-size:13px;color:var(--color-text-secondary)">None yet — insert variables above.</div>
-        </div>
-
-        <div class="card" id="progressCard" style="display:none; margin-top: 20px;">
-            <div class="section-head">Delivery Status</div>
-            
-            <div id="overallCounter" style="padding: 0 8px 10px 8px; font-weight: bold; color: var(--color-text-secondary); font-size: 14px;">
-                Ready to send...
+                <div id="previewPane" style="flex: 1; border: 1px solid #ddd; border-radius: 8px; background: #fff; display: flex; flex-direction: column;">
+                    <div style="padding: 10px; background: #f0f0f0; border-bottom: 1px solid #ddd; font-weight: bold; font-size: 14px;">
+                        Live Rendering Preview
+                    </div>
+                    <div style="padding: 15px; flex: 1; overflow-y: auto;">
+                        <div class="label" style="margin-bottom: 6px">Subject: <span id="previewSubject" style="color:var(--color-text-primary); font-weight: normal;"></span></div>
+                        <div class="label" style="margin-bottom: 10px">From: <span id="previewFrom" style="color:var(--color-text-primary); font-weight: normal;"></span></div>
+                        <hr style="border: 0; border-top: 1px solid #eee; margin: 10px 0;">
+                        <div class="preview-frame" id="previewBody"></div>
+                    </div>
+                </div>
             </div>
 
-            <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
-                <thead>
-                    <tr style="text-align: left; border-bottom: 1px solid #ddd;">
-                        <th style="padding: 8px;">Recipient</th>
-                        <th style="padding: 8px;">Status</th>
-                    </tr>
-                </thead>
-                <tbody id="progressBody"></tbody>
-            </table>
+            <!-- <div class="card">
+                <div class="section-head">Variables used in this template</div>
+                <div id="usedVarsList" style="font-size:13px;color:var(--color-text-secondary)">None yet — insert variables above.</div>
+            </div> -->
+
+        <div class="card" id="progressCard" style="display:none; margin-top: 20px; max-width: 1200px;">
+            <div class="section-head">Live Mailing Dashboard</div>
+            <div id="overallCounter" style="padding: 10px; font-weight: bold; color: var(--color-text-secondary);">
+                Ready to start...
+            </div>
+
+            <div style="display: flex; gap: 20px; min-height: 400px;">
+                
+                <div id="liveEmailPreview" style="flex: 1; border: 1px solid #ddd; border-radius: 8px; background: #fff; padding: 15px; overflow-y: auto;">
+                    <div style="font-weight: bold; margin-bottom: 10px; color: #555; border-bottom: 1px solid #eee;">Current Email Preview</div>
+                    <div id="currentRecipientDisplay" style="font-size: 13px; margin-bottom: 5px; color: #777;">Recipient: --</div>
+                    <hr style="border: 0; border-top: 1px solid #eee;">
+                    <div id="liveBodyContent" style="font-size: 14px;">(Waiting for batch to start...)</div>
+                </div>
+
+                <div id="statusTablePane" style="flex: 1; border: 1px solid #ddd; border-radius: 8px; background: #fafafa; overflow-y: auto; max-height: 500px;">
+                    <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+                        <thead style="position: sticky; top: 0; background: #eee;">
+                            <tr style="text-align: left; border-bottom: 1px solid #ddd;">
+                                <th style="padding: 10px;">Recipient</th>
+                                <th style="padding: 10px;">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="progressBody"></tbody>
+                    </table>
+                </div>
+            </div>
         </div>
 
         <button type="button" onclick="sendBulkEmails(event)" class="primary-btn">Start Bulk Send</button>

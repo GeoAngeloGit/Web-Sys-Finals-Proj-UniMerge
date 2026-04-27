@@ -38,6 +38,27 @@ const upload = multer({ storage });
 app.use(cors());
 app.use(express.json());
 
+app.post("/verify-connection", async (req, res) => {
+    const { user, pass } = req.body;
+
+    if (!user || !pass) {
+        return res.status(400).json({ success: false, message: "Email and password are required." });
+    }
+
+    const transporter = createTransport({
+        service: "gmail",
+        auth: { user, pass }
+    });
+
+    try {
+        await transporter.verify();
+        res.status(200).json({ success: true });
+    } catch (error) {
+        console.error("Connection Verification Error:", error);
+        res.status(401).json({ success: false, message: "Authentication failed. Please check your credentials." });
+    }
+});
+
 app.post("/process-files", upload.fields([
     { name: "csvFile", maxCount: 1 },
     { name: "zipFile", maxCount: 1 },

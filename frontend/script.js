@@ -1,4 +1,4 @@
-async function sendTest() {
+/*async function sendTest() {
     // get the input values from the form
     const data = {
         senderEmail : document.getElementById("senderEmail").value,
@@ -37,6 +37,50 @@ async function sendTest() {
         statusDiv.textContent = "An error occurred while sending the email.";
     }
     
+}*/
+
+async function verifyCredentials() {
+    const user = document.getElementById("senderEmail").value;
+    const pass = document.getElementById("appPassword").value;
+    const verifyBtn = document.getElementById("verifyBtn");
+    const uploadBtn = document.getElementById("uploadBtn");
+
+    if (!user || !pass) {
+        alert("Please enter both email and app password.");
+        return;
+    }
+
+    verifyBtn.disabled = true;
+    verifyBtn.textContent = "Verifying...";
+
+    try {
+        const response = await fetch("http://localhost:3000/verify-connection", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ user, pass })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            verifyBtn.textContent = "✅ Verified";
+            verifyBtn.style.backgroundColor = "#28a745";
+            verifyBtn.style.color = "white";
+            
+            // Enable the upload button now that we know the credentials work
+            uploadBtn.disabled = false;
+            uploadBtn.title = "Credentials verified. You can now upload files.";
+            alert("Credentials verified. You can now upload files.");
+        } else {
+            verifyBtn.textContent = "Verify Connection";
+            verifyBtn.disabled = false;
+            alert(result.message);
+        }
+    } catch (error) {
+        verifyBtn.textContent = "Verify Connection";
+        verifyBtn.disabled = false;
+        alert("Connection error. Is the server running?");
+    }
 }
 
 const varPillsEl = document.getElementById('varPills');
@@ -166,28 +210,33 @@ function highlightVars(text){
     return text.replace(/{{([\w_]+)}}/g,'<span class="preview-var">{{$1}}</span>');
 }
 
-function updatePreview(){
-    const body = bodyEditor.value;
-    const subj = subjectField.value;
-    const from = senderName.value;
+function updatePreview() {
+    const rawBody = document.getElementById('bodyEditor').value;
+    const subj = document.getElementById('subjectField').value;
+    const from = document.getElementById('senderName').value;
     
-    document.getElementById('previewSubject').innerHTML = highlightVars(subj)||'<span style="color:var(--color-text-tertiary)">(no subject)</span>';
-    document.getElementById('previewFrom').textContent = from||'(sender name)';
-    document.getElementById('previewBody').innerHTML = highlightVars(body)||'<span style="color:var(--color-text-tertiary)">(empty body)</span>';
+    // 1. Sanitize the HTML to block <script> tags
+    const cleanBody = sanitizeEmailHTML(rawBody);
+
+    // 2. Render the Preview
+    document.getElementById('previewSubject').innerHTML = highlightVars(subj) || '(no subject)';
+    document.getElementById('previewFrom').textContent = from || '(sender name)';
     
-    const allText = body + ' ' + subj;
+    // Use the sanitized HTML for the preview body
+    document.getElementById('previewBody').innerHTML = highlightVars(cleanBody) || '(empty body)';
+    
+    // 3. Update Variable Badges (Your existing logic)
+    const allText = rawBody + ' ' + subj;
     const found = [...new Set([...allText.matchAll(/{{([\w_]+)}}/g)].map(m=>m[1]))];
     const usedEl = document.getElementById('usedVarsList');
-    if(found.length===0){
-        usedEl.textContent = 'None yet — insert variables above.';
-    } 
-    else {
-        usedEl.innerHTML = found.map(v=>`<span class="mock-badge">{{${v}}}</span>`).join('');
+    
+    if(usedEl) {
+        if(found.length === 0){
+            usedEl.textContent = 'None yet — insert variables above.';
+        } else {
+            usedEl.innerHTML = found.map(v=>`<span class="mock-badge">{{${v}}}</span>`).join('');
+        }
     }
-    document.querySelectorAll('.var-pill').forEach(p => {
-        const key = p.dataset.key;
-        p.classList.toggle('used', found.includes(key));
-    });
 }
 
 function updateCounter(){
@@ -224,11 +273,45 @@ function initMappingDropdowns(headers) {
     document.getElementById('composeSection').style.display = 'block';
 }
 
+function sanitizeEmailHTML(rawHTML) {
+    // 1. Create a virtual document to parse the string
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(rawHTML, 'text/html');
+
+    // 2. Find and remove all <script> tags
+    const scripts = doc.querySelectorAll('script');
+    scripts.forEach(s => s.remove());
+
+    // 3. Find and remove all 'on' event attributes (e.g., onclick, onerror)
+    const allElements = doc.querySelectorAll('*');
+    allElements.forEach(el => {
+        const attrs = el.attributes;
+        for (let i = attrs.length - 1; i >= 0; i--) {
+            if (attrs[i].name.startsWith('on')) {
+                el.removeAttribute(attrs[i].name);
+            }
+        }
+        
+        // Block javascript: links in <a> tags
+        if (el.tagName === 'A' && el.getAttribute('href')?.startsWith('javascript:')) {
+            el.removeAttribute('href');
+        }
+    });
+
+    // Return the cleaned body content
+    return doc.body.innerHTML;
+}
+
 // Variable to store the headers/data from the upload step
 let currentSheetData = []; 
 
 async function sendBulkEmails(event) {
     if (event) event.preventDefault();
+
+    if (!document.getElementById("emailColSelect").value) {
+        alert("Please map the Recipient Email Column.");
+        return;
+    }
     
     const emailCol = document.getElementById('emailColSelect').value;
     const progressBody = document.getElementById('progressBody');
@@ -248,6 +331,18 @@ async function sendBulkEmails(event) {
     for (let i = 0; i < currentSheetData.length; i++) {
         const row = currentSheetData[i];
         const email = row[emailCol];
+        const rawBody = document.getElementById('bodyEditor').value;
+
+        document.getElementById("currentRecipientDisplay").textContent = `Current Recipient: ${email || '(no email found in this row)'}`;
+
+        let previewBody = rawBody;
+        // Replace variables in the preview body with actual values from the row
+        Object.keys(row).forEach(key => {
+            const regex = new RegExp(`{{${key}}}`, 'g');
+            previewBody = previewBody.replace(regex, row[key]);
+        });
+
+        document.getElementById("liveBodyContent").innerHTML = sanitizeEmailHTML(previewBody);
         
         // 1. UI: Create row and set to "Sending..."
         const tr = document.createElement('tr');
@@ -293,42 +388,31 @@ async function sendBulkEmails(event) {
         const count = i + 1; // Current number of emails processed
         const isLastEmail = count === currentSheetData.length;
 
-        // if (!isLastEmail) {
-        //     if (count % BATCH_SIZE === 0) {
-        //         // End of a batch! Wait 60 seconds
-        //         console.log(`Batch of ${BATCH_SIZE} reached. Waiting 60 seconds...`);
-                
-        //         // Optional UI update to show the pause
-        //         const pauseMsg = document.createElement('tr');
-        //         pauseMsg.innerHTML = `<td colspan="2" style="text-align:center; background:#f9f9f9; font-style:italic;">Batch limit reached. Cooling down for 60s...</td>`;
-        //         progressBody.appendChild(pauseMsg);
-
-        //         await new Promise(resolve => setTimeout(resolve, LONG_DELAY));
-        //         pauseMsg.remove(); // Remove the message when moving to next batch
-        //     } else {
-        //         // Just a normal individual delay
-        //         await new Promise(resolve => setTimeout(resolve, SHORT_DELAY));
-        //     }
-        // }
-
         counterEl.textContent = `Processing: ${count} of ${total} emails sent...`;
         // 5. Update Counter, show the break message if needed, and continue to next email
-        if (count % BATCH_SIZE === 0) {
+        if (count % BATCH_SIZE === 0 && !isLastEmail) {
             // 1. Create a special "Pause Row"
             const pauseMsg = document.createElement('tr');
             pauseMsg.id = "pauseRow"; // ID so we can find and remove it later
-            pauseMsg.innerHTML = `
-                <td colspan="2" style="text-align:center; background:#fff3cd; color: #856404; padding: 10px; font-style:italic;">
-                    ☕ Batch limit reached. Cooling down for 60 seconds to prevent spam flags...
-                </td>
-            `;
             progressBody.appendChild(pauseMsg);
 
-            // 2. Wait for the 60 seconds
-            await new Promise(resolve => setTimeout(resolve, LONG_DELAY));
+            // 2. Countdown logic for the pause
+            let pauseCounter = 60;
+            while (pauseCounter > 0) {
+                pauseMsg.innerHTML = 
+                `<td colspan="2" style="padding: 8px; border-bottom: 1px solid #eee; color: blue; text-align: center;">
+                    Pausing for batch cooldown... Resuming in ${pauseCounter} seconds.
+                </td>`;
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                pauseCounter--;
+            }
 
             // 3. Remove the message and continue
             pauseMsg.remove();
+        }
+        else if (!isLastEmail) {
+            // Short delay between emails to avoid overwhelming the server
+            await new Promise(resolve => setTimeout(resolve, SHORT_DELAY));
         }
     }
     counterEl.textContent = `Completed: All ${total} emails processed.`;
@@ -355,6 +439,8 @@ async function finishSession() {
         currentExtractDir = null;
         document.getElementById("senderEmail").value = "";
         document.getElementById("appPassword").value = "";
+        document.getElementById("csvFile").value = "";
+        document.getElementById("zipFile").value = "";
         
         // Reset UI
         document.getElementById("composeSection").style.display = "none";
