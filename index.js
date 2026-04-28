@@ -153,7 +153,11 @@ app.post("/notify", async (req, res) => {
                     path: filePath
                 });
             } else {
-                console.warn(`File not found: ${filePath}`);
+                // return failed
+                return res.status(400).json({ 
+                    success: false, 
+                    message: `Attachment file not found: ${attachmentFileName}` 
+                });
             }
         }
 

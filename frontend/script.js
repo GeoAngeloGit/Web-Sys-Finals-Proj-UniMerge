@@ -305,6 +305,49 @@ function sanitizeEmailHTML(rawHTML) {
 // Variable to store the headers/data from the upload step
 let currentSheetData = []; 
 let failedRecords = []; // To track failed email attempts for retrying later
+let isPaused = false; // To track if the batch process is currently paused
+let shouldStopSending = false;
+
+const checkPause = () => {
+    return new Promise(resolve => {
+        const interval = setInterval(() => {
+            if (!isPaused) {
+                clearInterval(interval);
+                resolve();
+            }
+        }, 500);
+    });
+}
+
+function togglePause() {
+    const icon = document.getElementById("pausePlayIcon");
+    const btn = document.getElementById("pausePlayBtn");
+    
+    isPaused = !isPaused;
+    
+    if (isPaused) {
+        icon.className = "bi bi-play-fill fs-4";
+        btn.classList.replace("btn-outline-primary", "btn-primary");
+    } else {
+        icon.className = "bi bi-pause-fill fs-4";
+        btn.classList.replace("btn-primary", "btn-outline-primary");
+        // Trigger the counter update back to "Processing..."
+    }
+}
+
+function stopSending() {
+    if (confirm("Stop all remaining emails?")) {
+        shouldStopSending = true;
+        isPaused = false; // Ensure it's not stuck in a pause state
+    }
+}
+
+function stopSending() {
+    if (confirm("Are you sure you want to stop the sending process? You can resume later, and any failed records will be available for download.")) {
+        shouldStopSending = true;
+    }
+}
+
 
 async function sendBulkEmails(event) {
     if (event) event.preventDefault();
@@ -334,6 +377,17 @@ async function sendBulkEmails(event) {
         const row = currentSheetData[i];
         const email = row[emailCol];
         const rawBody = document.getElementById('bodyEditor').value;
+
+        if(shouldStopSending) {
+            counterEl.textContent = `Process stopped by user. ${i} of ${total} emails processed.`;
+            counterEl.style.color = "Red";
+            break;
+        }
+
+        if (isPaused) {
+            counterEl.textContent = `Paused... ${i} of ${total} emails processed.`;
+            await checkPause();
+        }
 
         document.getElementById("currentRecipientDisplay").textContent = `Current Recipient: ${email || '(no email found in this row)'}`;
 
@@ -434,6 +488,7 @@ async function sendBulkEmails(event) {
 
     alert("Bulk sending process completed!");
 }
+
 
 function downloadFailedCSV() {
     if (failedRecords.length === 0) {
