@@ -124,14 +124,27 @@ async function uploadFile(event) {
 
             // Execute UI updates after a tiny delay for stability
             setTimeout(() => {
-                initPills(result.headers);
-                initMappingDropdowns(result.headers);
+                // initPills(result.headers);
+                // initMappingDropdowns(result.headers);
                 
-                // Show the sections
-                document.getElementById("composeSection").style.display = "block";
-                // Ensure this ID exists in your HTML!
-                const mappingCard = document.getElementById("mappingCard");
-                if (mappingCard) mappingCard.style.display = "block";
+                // // Show the sections
+                // const composeSection = document.getElementById("composeSection");
+                // if (composeSection) composeSection.style.display = "block";
+                // composeSection.classList.add('slide-up'); // Add slide-up class for animation
+
+                // // Ensure this ID exists in your HTML!
+                // // const mappingCard = document.getElementById("mappingCard");
+                // // if (mappingCard) mappingCard.style.display = "block";
+                const compose = document.getElementById('composeSection');
+                compose.style.display = 'block';
+                
+                // Smooth scroll and entrance
+                compose.scrollIntoView({ behavior: 'smooth' });
+                compose.classList.add('slide-up');
+
+                // These functions need the IDs we just restored:
+                initPills(result.headers); // Restores your variable buttons
+                initMappingDropdowns(result.headers); // Restores your dropdowns
             }, 100);
 
         } else {
@@ -269,7 +282,7 @@ function initMappingDropdowns(headers) {
     });
     
     // Show the card
-    document.getElementById('mappingCard').style.display = 'block';
+    //document.getElementById('mappingCard').style.display = 'block';
     document.getElementById('composeSection').style.display = 'block';
 }
 
@@ -346,6 +359,20 @@ function stopSending() {
     if (confirm("Are you sure you want to stop the sending process? You can resume later, and any failed records will be available for download.")) {
         shouldStopSending = true;
     }
+}
+
+function switchToDashboard() {
+    // 1. Hide Config View
+    document.getElementById('configView').classList.remove('view-active');
+    document.getElementById('configView').style.display = 'none';
+
+    // 2. Show Dashboard View
+    const dash = document.getElementById('dashboardView');
+    dash.classList.add('view-active');
+    dash.style.display = 'block';
+
+    // 3. Immediately trigger the bulk send
+    sendBulkEmails();
 }
 
 
@@ -486,6 +513,12 @@ async function sendBulkEmails(event) {
 
     document.getElementById("finishSection").style.display = "block";
 
+    if (failedRecords.length > 0) {
+        document.getElementById('downloadFailedBtn').style.display = 'inline-block';
+    } else {
+        document.getElementById('downloadFailedBtn').style.display = 'none';
+    }
+
     alert("Bulk sending process completed!");
 }
 
@@ -545,9 +578,12 @@ async function finishSession() {
         document.getElementById("composeSection").style.display = "none";
         document.getElementById("mappingCard").style.display = "none";
         document.getElementById("uploadStatus").textContent = "Session cleared. Files deleted.";
+
+        window.location.href = "home.html";
         
         alert("Cleanup complete. All data has been wiped from the server cache.");
     } catch (error) {
         console.error("Cleanup failed:", error);
+        window.location.href = "home.html";
     }
 }
