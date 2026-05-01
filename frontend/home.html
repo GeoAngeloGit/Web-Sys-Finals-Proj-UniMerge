@@ -28,26 +28,22 @@
     <section class="py-5 text-center bg-white">
         <div class="container py-5">
             <h1 class="display-3 fw-bold">Automate Your University Communications</h1>
-            <p class="lead text-muted">Efficient, secure, and personalized bulk emailing for Bicol University leaders.</p>
+            <p class="lead text-muted">Efficient, secure, and personalized bulk emailing with unique attachments.</p>
         </div>
     </section>
 
     <div class="container">
         <div class="stats-bar shadow-lg">
             <div class="row text-center">
-                <div class="col-md-3 stat-item">
-                    <h2 class="fw-bold">100+</h2>
-                    <p class="small text-uppercase">Emails per minute</p>
+                <div class="col-md-4 stat-item">
+                    <h2 class="fw-bold">100</h2>
+                    <p class="small text-uppercase">Emails in 17 minutes</p>
                 </div>
-                <div class="col-md-3 stat-item">
+                <div class="col-md-4 stat-item">
                     <h2 class="fw-bold">100%</h2>
                     <p class="small text-uppercase">Gmail Integrated</p>
                 </div>
-                <div class="col-md-3 stat-item">
-                    <h2 class="fw-bold">2000+</h2>
-                    <p class="small text-uppercase">Batch Capacity</p>
-                </div>
-                <div class="col-md-3 stat-item">
+                <div class="col-md-4 stat-item">
                     <h2 class="fw-bold">0</h2>
                     <p class="small text-uppercase">Data Footprint</p>
                 </div>
@@ -89,23 +85,49 @@
                 </div>
             </div>
 
-            <div id="secondaryFeatures" class="carousel slide shadow" data-bs-ride="carousel">
+            <div id="secondaryFeatures" class="carousel slide" data-bs-ride="carousel" data-bs-interval="3000">
                 <div class="carousel-inner border-radius-20">
-                    <div class="carousel-item active bg-dark">
-                        <img src="./ca8bf036-4a1f-404b-9ab4-79724fbb5e2a.jpg" class="d-block w-100 opacity-50" alt="Anti-Spam Throttling">
+                    
+                    <!-- Item 1 -->
+                    <div class="carousel-item active">
+                        <div class="card border-0 bg-dark text-white overflow-hidden shadow-lg">
+                            <img src="./images/anti spam.jpg" class="card-img" style="height: 450px; object-fit: cover;">
+                            <div class="carousel-caption">
+                                <h5 class="serif h4">Anti-Spam Throttling</h5>
+                                <p class="small">60-second cooldowns to protect your Bicol University account reputation.</p>
+                            </div>
+                        </div>
+                    </div>
 
-                        <div class="carousel-caption">
-                            <h5>Anti-Spam Throttling</h5>
-                            <p>Automated 60-second cooldowns to protect your account reputation.</p>
+                    <!-- Item 3 -->
+                    <div class="carousel-item">
+                        <div class="card border-0 bg-dark text-white overflow-hidden shadow-lg">
+                            <img src="./images/session isolation.png" class="card-img" style="height: 450px; object-fit: cover;">
+                            <div class="carousel-caption">
+                                <h5 class="serif h4">Session Isolation</h5>
+                                <p class="small">Secure transient data processing with zero local storage.</p>
+                            </div>
                         </div>
                     </div>
-                    <div class="carousel-item bg-secondary">
-                        <div class="carousel-caption">
-                            <h5>Session Isolation</h5>
-                            <p>Unique session folders ensure data never bleeds between users.</p>
+                    <div class="carousel-item">
+                        <div class="card border-0 bg-dark text-white overflow-hidden shadow-lg">
+                            <img src="./images/comprehensive failure reporting.png" class="card-img" style="height: 450px; object-fit: cover;">
+                            <div class="carousel-caption">
+                                <h5 class="serif h4">Comprehensive Failure Reporting</h5>
+                                <p class="small">Download a detailed CSV of failed attempts, including specific error reasons for easy correction.</p>
+                            </div>
                         </div>
                     </div>
+
                 </div>
+
+                <!-- Controls: Increased distance to avoid overlapping blurred cards -->
+                <button class="carousel-control-prev" type="button" data-bs-target="#secondaryFeatures" data-bs-slide="prev" style="left: -120px;">
+                    <span class="carousel-control-prev-icon bg-primary rounded-circle p-3"></span>
+                </button>
+                <button class="carousel-control-next" type="button" data-bs-target="#secondaryFeatures" data-bs-slide="next" style="right: -120px;">
+                    <span class="carousel-control-next-icon bg-primary rounded-circle p-3"></span>
+                </button>
             </div>
         </div>
     </section>
@@ -144,15 +166,15 @@
         <div class="container">
             <h2 class="mb-4">About the Developer</h2>
             <div class="mx-auto" style="max-width: 600px;">
-                <img src="placeholder-profile.jpg" class="rounded-circle mb-3" width="150">
+                <img src="./images/fea12799-672d-4f7e-8c91-771501c193eds.jpg" class="rounded-circle mb-3" width="150">
                 <h3>Geo Angelo Labalan</h3>
-                <p>IT Student at Bicol University. Passionate about bridging the gap between data logic and administrative efficiency for university organizations.</p>
+                <p>Mini Project - IT 112 Web Systems and Technologies</p>
             </div>
         </div>
     </section>
 
     <footer class="py-4 text-center border-top">
-        <p>&copy; 2026 UniMerge | Bicol University IT Project</p>
+        <p>&copy; 2026 UniMerge | Bicol University BS Information Technology</p>
     </footer>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
