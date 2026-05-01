@@ -1,157 +1,3 @@
-<!-- <!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mini Project</title>
-    <link rel="stylesheet" href="styles.css">
-</head>
-<body>
-    <div class="container">
-        <h2>Step 1: Sender Configuration</h2>
-        <div style="display: flex; gap: 10px; margin-bottom: 10px;">
-            <input type="email" id="senderEmail" placeholder="Enter Gmail Address" style="flex: 2;">
-            <input type="password" id="appPassword" placeholder="Enter App Password" style="flex: 2;">
-            <button type="button" id="verifyBtn" onclick="verifyCredentials()" class="toolbar-btn" style="flex: 1;">Verify Connection</button>
-        </div>
-        
-        <hr>
-        
-        <div>
-            <h2>Step 2: Compose Your Email</h2>
-            <input type="file" id="csvFile" accept=".csv, .xlsx">
-            <input type="file" id="zipFile" accept=".zip">
-            <button type="button" id="uploadBtn" onclick="uploadFile(event)" disabled title="Please verify credentials first">Upload CSV</button>
-            <div id="uploadStatus"></div>
-        </div>
-    </div>
-
-    <hr>
-    
-    <div class="card" id="mappingCard" style="display:none;">
-        <div class="section-head">Data Mapping</div>
-        <p class="hint">Tell the system which columns to use for delivery.</p>
-        <div class="field-row">
-            <div class="field-group">
-            <div class="label">Recipient Email Column</div>
-            <select id="emailColSelect" class="toolbar-btn" style="width:100%; height:35px;"></select>
-            </div>
-            <div class="field-group">
-            <div class="label">Attachment Filename Column (Optional)</div>
-            <select id="attachmentColSelect" class="toolbar-btn" style="width:100%; height:35px;"></select>
-            </div>
-        </div>
-    </div>
-
-    <div class="wrap" id="composeSection" style="display:none;">
-        <div class="card">
-            <div class="section-head">Sample CSV headers (click to insert into body)</div>
-            <p class="hint" style="margin-bottom:8px">These come from your uploaded file. Click any variable to insert it at the cursor.</p>
-            <div class="var-pills" id="varPills"></div>
-        </div>
-
-        <div class="card">
-            <div class="section-head">Email details</div>
-            <div class="field-row">
-                <div class="field-group">
-                    <div class="label">Subject line</div>
-                    <input type="text" id="subjectField" placeholder="e.g. Your certificate for {{event_name}}" oninput="updatePreview()">
-                </div>
-                <div class="field-group">
-                    <div class="label">Sender name (display)</div>
-                    <input type="text" id="senderName" placeholder="e.g. Events Team" oninput="updatePreview()">
-                </div>
-            </div>
-
-            <div class="divider"></div>
-
-            <div class="section-head" style="margin-bottom:8px">Email body (HTML supported)</div>
-
-            <div class="split-editor-container" style="display: flex; gap: 20px; min-height: 500px;">
-                
-                <div id="editorPane" style="flex: 1; display: flex; flex-direction: column;">
-                    <div class="editor-toolbar">
-                        <button class="toolbar-btn" onclick="wrapTag('b')">B</button>
-                        <button class="toolbar-btn" onclick="wrapTag('i')"><i>I</i></button>
-                        <button class="toolbar-btn" onclick="wrapTag('u')"><u>U</u></button>
-                        <button class="toolbar-btn" onclick="insertSnippet('<br>')">↵ br</button>
-                        <button class="toolbar-btn" onclick="insertSnippet('<h2></h2>')">H2</button>
-                        <button class="toolbar-btn" onclick="insertSnippet('<p></p>')">P</button>
-                        <button class="toolbar-btn" onclick="insertSnippet('<a href=\'\'></a>')">Link</button>
-                        <button class="toolbar-btn" onclick="insertSnippet('<img src=\'\' style=\'max-width:100%\'>')">Img</button>
-                        <button class="toolbar-btn" onclick="loadTemplate()">Load template</button>
-                    </div>
-                    <textarea id="bodyEditor" style="flex: 1; min-height: 400px;" oninput="updatePreview();updateCounter()" placeholder="Write your HTML email body here. Use {{variable}} to insert recipient data."></textarea>
-                    <div class="counter" id="charCounter">0 characters</div>
-                    <div class="hint">Tip: use {{variable_name}} anywhere.</div>
-                </div>
-
-                <div id="previewPane" style="flex: 1; border: 1px solid #ddd; border-radius: 8px; background: #fff; display: flex; flex-direction: column;">
-                    <div style="padding: 10px; background: #f0f0f0; border-bottom: 1px solid #ddd; font-weight: bold; font-size: 14px;">
-                        Live Rendering Preview
-                    </div>
-                    <div style="padding: 15px; flex: 1; overflow-y: auto;">
-                        <div class="label" style="margin-bottom: 6px">Subject: <span id="previewSubject" style="color:var(--color-text-primary); font-weight: normal;"></span></div>
-                        <div class="label" style="margin-bottom: 10px">From: <span id="previewFrom" style="color:var(--color-text-primary); font-weight: normal;"></span></div>
-                        <hr style="border: 0; border-top: 1px solid #eee; margin: 10px 0;">
-                        <div class="preview-frame" id="previewBody"></div>
-                    </div>
-                </div>
-            </div>
-
-        <div class="card" id="progressCard" style="display:none; margin-top: 20px; max-width: 1200px;">
-            <div class="section-head">Live Mailing Dashboard</div>
-            <div id="overallCounter" style="padding: 10px; font-weight: bold; color: var(--color-text-secondary);">
-                Ready to start...
-            </div>
-            <div class="control-actions" style="margin-bottom: 15px;">
-                <button type="button" id="pausePlayBtn" onclick="togglePause()" class="btn btn-outline-primary rounded-circle" style="width: 50px; height: 50px;">
-                    <i id="pausePlayIcon" class="bi bi-pause-fill fs-4"></i>
-                </button>
-
-                <button type="button" onclick="stopSending()" class="btn btn-outline-danger rounded-circle ms-2" style="width: 50px; height: 50px;">
-                    <i class="bi bi-stop-fill fs-4"></i>
-                </button>
-            </div>
-
-            <div style="display: flex; gap: 20px; min-height: 400px;">
-                
-                <div id="liveEmailPreview" style="flex: 1; border: 1px solid #ddd; border-radius: 8px; background: #fff; padding: 15px; overflow-y: auto;">
-                    
-
-                    <div style="font-weight: bold; margin-bottom: 10px; color: #555; border-bottom: 1px solid #eee;">Current Email Preview</div>
-                    <div id="currentRecipientDisplay" style="font-size: 13px; margin-bottom: 5px; color: #777;">Recipient: --</div>
-                    <hr style="border: 0; border-top: 1px solid #eee;">
-                    <div id="liveBodyContent" style="font-size: 14px;">(Waiting for batch to start...)</div>
-                </div>
-
-                <div id="statusTablePane" style="flex: 1; border: 1px solid #ddd; border-radius: 8px; background: #fafafa; overflow-y: auto; max-height: 500px;">
-                    <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
-                        <thead style="position: sticky; top: 0; background: #eee;">
-                            <tr style="text-align: left; border-bottom: 1px solid #ddd;">
-                                <th style="padding: 10px;">Recipient</th>
-                                <th style="padding: 10px;">Status</th>
-                            </tr>
-                        </thead>
-                        <tbody id="progressBody"></tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-
-        <button type="button" onclick="sendBulkEmails(event)" class="primary-btn">Start Bulk Send</button>
-    </div>
-
-
-    <div id="finishSection" style="display:none; margin-left: 20px;">
-        <button type="reset" onclick="finishSession()">Done</button>
-        
-        <button id="downloadFailedBtn" style="display:none;" onclick="downloadFailedCSV()">Download Failed Emails (.csv)</button>
-    </div>
-<script src="script.js"></script>
-</body>
-</html> -->
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -224,9 +70,44 @@
         /* View Switching */
         .view-section { display: none; }
         .view-active { display: block; }
+
+        .breadcrumb-item.active {
+            color: var(--bright-teal-blue) !important;
+            font-weight: 700;
+        }
+
+        .breadcrumb-item:not(.active) {
+            color: var(--text-secondary);
+            opacity: 0.6;
+        }
+
+        /* Hide breadcrumb arrows for a cleaner modern look */
+        .breadcrumb-item + .breadcrumb-item::before {
+            content: "→";
+            color: var(--frosted-blue);
+        }
     </style>
 </head>
 <body>
+
+    <div class="container mt-4" style="margin-bottom: -40px;">
+        <div class="d-flex justify-content-between align-items-center unimerge-card py-2 px-4 shadow-sm">
+            <!-- Back Button -->
+            <button id="navBackBtn" class="btn btn-sm btn-outline-secondary rounded-pill px-3" onclick="handleBackNav()">
+                <i class="bi bi-arrow-left me-1"></i> Back
+            </button>
+
+            <!-- Breadcrumbs -->
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb mb-0">
+                    <li class="breadcrumb-item active" id="step1-crumb">Config</li>
+                    <li class="breadcrumb-item" id="step2-crumb">Upload</li>
+                    <li class="breadcrumb-item" id="step3-crumb">Compose</li>
+                    <li class="breadcrumb-item" id="step4-crumb">Mailing</li>
+                </ol>
+            </nav>
+        </div>
+    </div>
 
     <div id="configView" class="container py-5 view-active">
         <div class="row">

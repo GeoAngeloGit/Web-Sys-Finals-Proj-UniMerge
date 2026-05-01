@@ -1,43 +1,35 @@
-/*async function sendTest() {
-    // get the input values from the form
-    const data = {
-        senderEmail : document.getElementById("senderEmail").value,
-        appPassword : document.getElementById("appPassword").value,
-        recipientEmail : document.getElementById("recipientEmail").value,
-        subject : document.getElementById("subject").value,
-        message : document.getElementById("message").value
-    }
+let currentStep = 1;
+
+// Function to update breadcrumb visuals
+function updateBreadcrumbs(step) {
+    currentStep = step;
+    const steps = ['step1-crumb', 'step2-crumb', 'step3-crumb', 'step4-crumb'];
     
-    const statusDiv = document.getElementById("status");
-    statusDiv.textContent = "Sending email...";
-
-    try {
-        // send the data to the Node.js server
-        const response = await fetch("http://localhost:3000/notify", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-            },
-            body: JSON.stringify(data),
-        });
-
-        const result = await response.json();
-
-        //update the UI based on the response
-        if (result.success) {
-            statusDiv.style.color = "green";
-            statusDiv.textContent = "Email sent successfully!";
+    steps.forEach((id, index) => {
+        const el = document.getElementById(id);
+        if (index + 1 === step) {
+            el.classList.add('active');
         } else {
-            statusDiv.style.color = "red";
-            statusDiv.textContent = "Failed to send email.";
+            el.classList.remove('active');
         }
-    } catch (error) {
-        console.error("Error:", error);
-        statusDiv.style.color = "red";
-        statusDiv.textContent = "An error occurred while sending the email.";
+    });
+
+    // Update Back Button Visibility
+    const backBtn = document.getElementById('navBackBtn');
+    backBtn.style.visibility = (step === 1) ? 'hidden' : 'visible';
+}
+
+// Logical Back Navigation
+function handleBackNav() {
+    if (currentStep === 4) {
+        // As requested: If in Step 4 (Mailing), go all the way back to Step 1
+        location.reload(); // Hard reset for session security
+    } 
+    else {
+        window.location.href = 'home.html'; // For any other step, just go back to home
     }
-    
-}*/
+}
+
 
 async function verifyCredentials() {
     const user = document.getElementById("senderEmail").value;
@@ -71,6 +63,10 @@ async function verifyCredentials() {
             uploadBtn.disabled = false;
             uploadBtn.title = "Credentials verified. You can now upload files.";
             alert("Credentials verified. You can now upload files.");
+
+            document.getElementById('csvFile').addEventListener('change', () => {
+                updateBreadcrumbs(2);
+            });
         } else {
             verifyBtn.textContent = "Verify Connection";
             verifyBtn.disabled = false;
@@ -124,20 +120,11 @@ async function uploadFile(event) {
 
             // Execute UI updates after a tiny delay for stability
             setTimeout(() => {
-                // initPills(result.headers);
-                // initMappingDropdowns(result.headers);
-                
-                // // Show the sections
-                // const composeSection = document.getElementById("composeSection");
-                // if (composeSection) composeSection.style.display = "block";
-                // composeSection.classList.add('slide-up'); // Add slide-up class for animation
-
-                // // Ensure this ID exists in your HTML!
-                // // const mappingCard = document.getElementById("mappingCard");
-                // // if (mappingCard) mappingCard.style.display = "block";
                 const compose = document.getElementById('composeSection');
                 compose.style.display = 'block';
                 
+                updateBreadcrumbs(3); // Move to Step 3 in breadcrumbs
+
                 // Smooth scroll and entrance
                 compose.scrollIntoView({ behavior: 'smooth' });
                 compose.classList.add('slide-up');
@@ -365,6 +352,9 @@ function switchToDashboard() {
     // 1. Hide Config View
     document.getElementById('configView').classList.remove('view-active');
     document.getElementById('configView').style.display = 'none';
+    document.getElementById('dashboardView').classList.add('view-active');
+    document.getElementById('dashboardView').style.display = 'block';
+    updateBreadcrumbs(4);
 
     // 2. Show Dashboard View
     const dash = document.getElementById('dashboardView');
