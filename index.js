@@ -144,7 +144,6 @@ app.post("/notify", async (req, res) => {
 
         // NEW: Attachment Path Matching
         if (extractDir && attachmentFileName) {
-            // We assume the files are PDFs. Adjust if they are images!
             const filePath = path.join(extractDir, `${attachmentFileName}`);
             
             if (fs.existsSync(filePath)) {
@@ -152,7 +151,8 @@ app.post("/notify", async (req, res) => {
                     filename: `${attachmentFileName}`,
                     path: filePath
                 });
-            } else {
+            } 
+            else {
                 // return failed
                 return res.status(400).json({ 
                     success: false, 

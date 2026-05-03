@@ -215,17 +215,17 @@ function updatePreview() {
     const subj = document.getElementById('subjectField').value;
     const from = document.getElementById('senderName').value;
     
-    // 1. Sanitize the HTML to block <script> tags
+    //Sanitize the HTML to block <script> tags
     const cleanBody = sanitizeEmailHTML(rawBody);
 
-    // 2. Render the Preview
+    //Render the Preview
     document.getElementById('previewSubject').innerHTML = highlightVars(subj) || '(no subject)';
     document.getElementById('previewFrom').textContent = from || '(sender name)';
     
     // Use the sanitized HTML for the preview body
     document.getElementById('previewBody').innerHTML = highlightVars(cleanBody) || '(empty body)';
     
-    // 3. Update Variable Badges (Your existing logic)
+    //Update Variable Badges
     const allText = rawBody + ' ' + subj;
     const found = [...new Set([...allText.matchAll(/{{([\w_]+)}}/g)].map(m=>m[1]))];
     const usedEl = document.getElementById('usedVarsList');
@@ -274,15 +274,15 @@ function initMappingDropdowns(headers) {
 }
 
 function sanitizeEmailHTML(rawHTML) {
-    // 1. Create a virtual document to parse the string
+    //Create a virtual document to parse the string
     const parser = new DOMParser();
     const doc = parser.parseFromString(rawHTML, 'text/html');
 
-    // 2. Find and remove all <script> tags
+    //Find and remove all <script> tags
     const scripts = doc.querySelectorAll('script');
     scripts.forEach(s => s.remove());
 
-    // 3. Find and remove all 'on' event attributes (e.g., onclick, onerror)
+    //Find and remove all 'on' event attributes (e.g., onclick, onerror)
     const allElements = doc.querySelectorAll('*');
     allElements.forEach(el => {
         const attrs = el.attributes;
@@ -342,11 +342,11 @@ function stopSending() {
     }
 }
 
-function stopSending() {
-    if (confirm("Are you sure you want to stop the sending process? You can resume later, and any failed records will be available for download.")) {
-        shouldStopSending = true;
-    }
-}
+// function stopSending() {
+//     if (confirm("Are you sure you want to stop the sending process? You can resume later, and any failed records will be available for download.")) {
+//         shouldStopSending = true;
+//     }
+// }
 
 function switchToDashboard() {
     // 1. Hide Config View

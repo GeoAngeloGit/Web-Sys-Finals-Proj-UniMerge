@@ -228,7 +228,12 @@ input[type = text], input[type = email] {
     --light-cyan: #caf0f8ff;
 }
 
-body { font-family: 'Maven Pro', sans-serif; background-color: var(--light-cyan); color: var(--deep-twilight); }
+body { 
+    font-family: 'Maven Pro', sans-serif; 
+    background-color: var(--light-cyan); 
+    color: var(--deep-twilight); 
+}
+
 h1, h2, h3, .serif { font-family: 'Playfair Display', serif; }
 
 /* 1. Navbar Customization */
@@ -276,8 +281,6 @@ h1, h2, h3, .serif { font-family: 'Playfair Display', serif; }
     margin-bottom: 1rem; 
 }
 
-
-
 /* 4. Scroll Transition Steps */
 .step-container { 
     position: relative; 
@@ -297,6 +300,10 @@ h1, h2, h3, .serif { font-family: 'Playfair Display', serif; }
 html, body {
     scroll-behavior: smooth;
     scroll-padding-top: 80px;
+}
+
+.breadcrumb {
+    font-size: 0.9rem;
 }
 
 /* 1. Container Setup */
@@ -407,4 +414,76 @@ html, body {
 @media (max-width: 768px) {
     .hero-wrapper { min-height: 4vh; }
     .display-3 { font-size: 2.5rem; }
+}
+
+/* Container for the flip effect */
+.flip-card {
+    background-color: transparent;
+    width: 100%;
+    aspect-ratio: 16 / 9; /* Maintains a 16:9 ratio */
+    height: auto; /* Adjust based on your preferred video height */
+    perspective: 1000px;
+    cursor: pointer;
+}
+
+.flip-card-inner {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    text-align: center;
+    transition: transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+    transform-style: preserve-3d;
+}
+
+/* Toggle Class for JavaScript */
+.flip-card.flipped .flip-card-inner {
+    transform: rotateY(180deg);
+}
+
+.flip-card-front, .flip-card-back {
+    position: absolute; /* cite: 2 */
+    width: 100%; /* cite: 2 */
+    height: 100%; /* cite: 2 */
+    -webkit-backface-visibility: hidden; /* cite: 2 */
+    backface-visibility: hidden; /* cite: 2 */
+    border-radius: 20px; /* cite: 2 */
+    overflow: hidden; /* cite: 2 */
+    display: flex; /* cite: 2 */
+    flex-direction: column; /* cite: 2 */
+    justify-content: center; /* cite: 2 */
+    
+    /* Add this to force the rounded corner clip */
+    -webkit-mask-image: -webkit-radial-gradient(white, black);
+}
+
+/* Front Side Styling */
+.flip-card-front {
+    background: white;
+    padding: 2rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    box-shadow: 0 10px 30px rgba(3, 4, 94, 0.05);
+}
+
+/* Back Side Styling (Video) */
+.flip-card-back {
+    background: var(--deep-twilight);
+    transform: rotateY(180deg);
+    isolation: isolate; /* Ensures the video doesn't affect the front side's rendering */
+    z-index: 1;
+    overflow: hidden;
+}
+
+.flip-card-back video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover; /* Ensures video fills the card area */
+    border-radius: 20px;
+}
+
+/* Interaction Effects */
+.feature-cards:hover .flip-card:not(:hover) {
+    opacity: 0.6;
+    transform: scale(0.98);
 }
