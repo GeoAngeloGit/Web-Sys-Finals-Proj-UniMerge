@@ -85,6 +85,7 @@ const subjectField = document.getElementById('subjectField');
 const senderName = document.getElementById('senderName');
 
 let currentExtractDir = null;
+let zipUploaded = false;
 
 async function uploadFile(event) {
     if (event) event.preventDefault();
@@ -93,7 +94,7 @@ async function uploadFile(event) {
     const zipInput = document.getElementById("zipFile"); // Add this ID to your HTML
 
     if (!csvInput.files[0]) {
-        document.getElementById("uploadStatus").textContent = "CSV file is required.";
+        document.getElementById("uploadStatus").textContent = "CSV/Excel file is required.";
         return;
     }
 
@@ -112,11 +113,18 @@ async function uploadFile(event) {
         if (result.success) {
             currentSheetData = result.allRows; // Store the rows
             currentExtractDir = result.extractDir;
+            zipUploaded = !!document.getElementById('zipFile').files[0];
             let message = "CSV uploaded successfully!";
             if (result.files.zipFile) {
                 message += " ZIP uploaded successfully!";
             }
             document.getElementById("uploadStatus").textContent = message;
+            const attachmentLabel = document.getElementById('attachmentColLabel');
+            if (attachmentLabel) {
+                attachmentLabel.textContent = zipUploaded
+                    ? 'Attachment Filename Column (Required)'
+                    : 'Attachment Filename Column (Optional)';
+            }
 
             // Execute UI updates after a tiny delay for stability
             setTimeout(() => {
@@ -348,18 +356,68 @@ function stopSending() {
 //     }
 // }
 
+function scrollToInput(element) {
+    if (!element) return;
+    element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    if (typeof element.focus === 'function') {
+        element.focus({ preventScroll: true });
+    }
+}
+
 function switchToDashboard() {
+    const emailColSelect = document.getElementById('emailColSelect');
+    if (!emailColSelect || !emailColSelect.value) {
+        alert('Please map the Recipient Email Column.');
+        scrollToInput(emailColSelect);
+        return;
+    }
+
+    const subjectField = document.getElementById('subjectField');
+    if (!subjectField || !subjectField.value || subjectField.value.trim() === '') {
+        alert('Please enter an email subject.');
+        scrollToInput(subjectField);
+        return;
+    }
+
+    const senderName = document.getElementById('senderName');
+    if (!senderName || !senderName.value || senderName.value.trim() === '') {
+        alert('Please enter a sender name.');
+        scrollToInput(senderName);
+        return;
+    }
+
+    const attachmentColSelect = document.getElementById('attachmentColSelect');
+    if (zipUploaded && (!attachmentColSelect || !attachmentColSelect.value)) {
+        alert('Please select the Attachment Filename Column.');
+        scrollToInput(attachmentColSelect);
+        return;
+    }
+
+    const bodyEditor = document.getElementById('bodyEditor');
+    if (!bodyEditor || !bodyEditor.value || bodyEditor.value.trim() === '') {
+        alert('Please enter an email body.');
+        scrollToInput(bodyEditor);
+        return;
+    }
+
     // 1. Hide Config View
-    document.getElementById('configView').classList.remove('view-active');
-    document.getElementById('configView').style.display = 'none';
-    document.getElementById('dashboardView').classList.add('view-active');
-    document.getElementById('dashboardView').style.display = 'block';
+    const configView = document.getElementById('configView');
+    if (configView) {
+        configView.classList.remove('view-active');
+        configView.style.display = 'none';
+    }
+    const dashboardView = document.getElementById('dashboardView');
+    if (dashboardView) {
+        dashboardView.classList.add('view-active');
+        dashboardView.style.display = 'block';
+    }
     updateBreadcrumbs(4);
 
     // 2. Show Dashboard View
-    const dash = document.getElementById('dashboardView');
-    dash.classList.add('view-active');
-    dash.style.display = 'block';
+    if (dashboardView) {
+        dashboardView.classList.add('view-active');
+        dashboardView.style.display = 'block';
+    }
 
     // 3. Immediately trigger the bulk send
     sendBulkEmails();
@@ -369,11 +427,6 @@ function switchToDashboard() {
 async function sendBulkEmails(event) {
     if (event) event.preventDefault();
     failedRecords = []; // Reset failed records at the start of each send attempt
-
-    if (!document.getElementById("emailColSelect").value) {
-        alert("Please map the Recipient Email Column.");
-        return;
-    }
     
     const emailCol = document.getElementById('emailColSelect').value;
     const progressBody = document.getElementById('progressBody');
@@ -576,4 +629,29 @@ async function finishSession() {
         console.error("Cleanup failed:", error);
         window.location.href = "home.html";
     }
+}
+
+// Flip card logic - only one card can be flipped at a time
+let currentFlippedCard = null;
+
+function toggleFlipCard(card) {
+    const flipCardDiv = card.closest('.flip-card');
+    
+    // If clicking the same card, just toggle it
+    if (currentFlippedCard === flipCardDiv) {
+        flipCardDiv.classList.toggle('flipped');
+        if (!flipCardDiv.classList.contains('flipped')) {
+            currentFlippedCard = null;
+        }
+        return;
+    }
+    
+    // Unflip the previously flipped card
+    if (currentFlippedCard) {
+        currentFlippedCard.classList.remove('flipped');
+    }
+    
+    // Flip the new card
+    flipCardDiv.classList.add('flipped');
+    currentFlippedCard = flipCardDiv;
 }

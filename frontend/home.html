@@ -152,7 +152,7 @@
         <div class="row g-4 feature-cards">
             <!-- Step 1 -->
             <div class="col-md-6">
-                <div class="flip-card" onclick="this.classList.toggle('flipped')">
+                <div class="flip-card" onclick="toggleFlipCard(this)">
                     <div class="flip-card-inner">
                         <div class="flip-card-front feature-card">
                             <h3>Step 1: Authenticate</h3>
@@ -160,7 +160,7 @@
                             <small class="text-primary">Click to view demo</small>
                         </div>
                         <div class="flip-card-back">
-                            <video muted loop playsinline onmouseover="this.play()" onmouseout="this.pause()">
+                            <video muted loop playsinline autoplay>
                                 <source src="./images/Recording 2026-05-03 200658.mp4" type="video/mp4">
                             </video>
                         </div>
@@ -170,7 +170,7 @@
 
             <!-- Step 2 -->
             <div class="col-md-6">
-                <div class="flip-card" onclick="this.classList.toggle('flipped')">
+                <div class="flip-card" onclick="toggleFlipCard(this)">
                     <div class="flip-card-inner">
                         <div class="flip-card-front feature-card">
                             <h3>Step 2: Upload Assets</h3>
@@ -178,7 +178,7 @@
                             <small class="text-primary">Click to view demo</small>
                         </div>
                         <div class="flip-card-back">
-                            <video muted loop playsinline onmouseover="this.play()" onmouseout="this.pause()">
+                            <video muted loop playsinline autoplay>
                                 <source src="./images/Screen Recording 2026-05-03 195859.mp4" type="video/mp4">
                             </video>
                         </div>
@@ -188,7 +188,7 @@
 
             <!-- Repeat for Step 3 and 4 with the same structure -->
             <div class="col-md-6">
-                <div class="flip-card" onclick="this.classList.toggle('flipped')">
+                <div class="flip-card" onclick="toggleFlipCard(this)">
                     <div class="flip-card-inner">
                         <div class="flip-card-front feature-card">
                             <h3>Step 3: Map and Compose</h3>
@@ -196,7 +196,7 @@
                             <small class="text-primary">Click to view demo</small>
                         </div>
                         <div class="flip-card-back">
-                            <video muted loop playsinline onmouseover="this.play()" onmouseout="this.pause()">
+                            <video muted loop playsinline autoplay>
                                 <source src="./images/Screen Recording 2026-05-03 203824.mp4" type="video/mp4">
                             </video>
                         </div>
@@ -205,7 +205,7 @@
             </div>
 
             <div class="col-md-6">
-                <div class="flip-card" onclick="this.classList.toggle('flipped')">
+                <div class="flip-card" onclick="toggleFlipCard(this)">
                     <div class="flip-card-inner">
                         <div class="flip-card-front feature-card">
                             <h3>Step 4: Send and Monitor</h3>
@@ -213,8 +213,8 @@
                             <small class="text-primary">Click to view demo</small>
                         </div>
                         <div class="flip-card-back">
-                            <video muted loop playsinline onmouseover="this.play()" onmouseout="this.pause()">
-                                <source src="./images" type="video/mp4">
+                            <video muted loop playsinline autoplay>
+                                <source src="./images/Screen Recording 2026-05-07 154705.mp4" type="video/mp4">
                             </video>
                         </div>
                     </div>
@@ -242,5 +242,6 @@
     </footer>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="script.js"></script>
 </body>
 </html>
