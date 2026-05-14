@@ -12,10 +12,13 @@
   "type": "module",
   "dependencies": {
     "adm-zip": "^0.5.17",
+    "bcryptjs": "^3.0.3",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
+    "express-session": "^1.19.0",
     "multer": "^2.1.1",
+    "mysql2": "^3.22.3",
     "nodemailer": "^8.0.5",
     "uuid": "^14.0.0",
     "xlsx": "^0.18.5"

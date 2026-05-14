@@ -49,7 +49,8 @@ async function verifyCredentials() {
         const response = await fetch("http://localhost:3000/verify-connection", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ user, pass })
+            body: JSON.stringify({ user, pass }),
+            credentials: 'include' // Ensure cookies are sent for session management
         });
 
         const result = await response.json();
@@ -424,147 +425,281 @@ function switchToDashboard() {
 }
 
 
-async function sendBulkEmails(event) {
-    if (event) event.preventDefault();
-    failedRecords = []; // Reset failed records at the start of each send attempt
+// async function sendBulkEmails(event) {
+//     if (event) event.preventDefault();
+//     failedRecords = []; // Reset failed records at the start of each send attempt
     
-    const emailCol = document.getElementById('emailColSelect').value;
-    const progressBody = document.getElementById('progressBody');
+//     const emailCol = document.getElementById('emailColSelect').value;
+//     const progressBody = document.getElementById('progressBody');
 
-    const BATCH_SIZE = 20; // Set your batch size here
-    const LONG_DELAY = 60000; // 60 seconds in milliseconds
-    const SHORT_DELAY = 2000; // 2 seconds between emails
+//     const BATCH_SIZE = 20; // Set your batch size here
+//     const LONG_DELAY = 60000; // 60 seconds in milliseconds
+//     const SHORT_DELAY = 2000; // 2 seconds between emails
 
-    // Show the progress card and clear previous results
-    const total = currentSheetData.length;
-    const counterEl = document.getElementById('overallCounter');
-    document.getElementById('progressCard').style.display = 'block';
-    progressBody.innerHTML = ''; 
+//     Show the progress card and clear previous results
+//     const total = currentSheetData.length;
+//     const counterEl = document.getElementById('overallCounter');
+//     document.getElementById('progressCard').style.display = 'block';
+//     progressBody.innerHTML = ''; 
     
 
-    // Loop through each row of the current sheet data
-    for (let i = 0; i < currentSheetData.length; i++) {
-        const row = currentSheetData[i];
-        const email = row[emailCol];
-        const rawBody = document.getElementById('bodyEditor').value;
+//     Loop through each row of the current sheet data
+//     for (let i = 0; i < currentSheetData.length; i++) {
+//         const row = currentSheetData[i];
+//         const email = row[emailCol];
+//         const rawBody = document.getElementById('bodyEditor').value;
 
-        if(shouldStopSending) {
-            counterEl.textContent = `Process stopped by user. ${i} of ${total} emails processed.`;
-            counterEl.style.color = "Red";
-            break;
+//         if(shouldStopSending) {
+//             counterEl.textContent = `Process stopped by user. ${i} of ${total} emails processed.`;
+//             counterEl.style.color = "Red";
+//             break;
+//         }
+
+//         if (isPaused) {
+//             counterEl.textContent = `Paused... ${i} of ${total} emails processed.`;
+//             await checkPause();
+//         }
+
+//         document.getElementById("currentRecipientDisplay").textContent = `Current Recipient: ${email || '(no email found in this row)'}`;
+
+//         let previewBody = rawBody;
+//         Replace variables in the preview body with actual values from the row
+//         Object.keys(row).forEach(key => {
+//             const regex = new RegExp(`{{${key}}}`, 'g');
+//             previewBody = previewBody.replace(regex, row[key]);
+//         });
+
+//         document.getElementById("liveBodyContent").innerHTML = sanitizeEmailHTML(previewBody);
+        
+//         1. UI: Create row and set to "Sending..."
+//         const tr = document.createElement('tr');
+//         tr.innerHTML = `
+//             <td style="padding: 8px; border-bottom: 1px solid #eee;">${email}</td>
+//             <td class="status-cell" style="padding: 8px; border-bottom: 1px solid #eee; color: orange;">Sending...</td>
+//         `;
+//         progressBody.appendChild(tr);
+//         const statusCell = tr.querySelector('.status-cell');
+
+//         2. Prepare Payload
+//         const payload = {
+//             auth: {
+//                 user: document.getElementById("senderEmail").value,
+//                 pass: document.getElementById("appPassword").value
+//             },
+//             recipients: allRowsFromCSV,
+//             subject: document.getElementById("subjectField").value,
+//             body: document.getElementById("bodyEditor").value,
+//             senderName: document.getElementById("senderName").value,
+//             rowData: row,
+//             extractDir: currentExtractDir,
+//             attachmentFileName: row[document.getElementById('attachmentColSelect').value]
+//         };
+
+//         3. Send Email
+//         try {
+//             const response = await fetch("http://localhost:3000/api/send-bulk", {
+//                 method: "POST",
+//                 headers: { "Content-Type": "application/json" },
+//                 body: JSON.stringify(payload)
+//             });
+//             const result = await response.json();
+
+//             if(result.success) {
+//                 statusCell.textContent = "✅ Success";
+//                 statusCell.style.color = "green";
+//             } else {
+//                 statusCell.textContent = "❌ Failed";
+//                 statusCell.style.color = "red";
+//                 failedRecords.push({ ...row, Error_Reason: result.message || 'SMTP Reject' });
+//                 document.getElementById('downloadFailedBtn').style.display = 'inline-block';
+//             }
+//         } catch (err) {
+//             statusCell.textContent = "⚠️ Error";
+//             failedRecords.push({ row, Error_Reason: err.message || 'Network/Server Error' });
+//             document.getElementById('downloadFailedBtn').style.display = 'inline-block';
+//         }
+
+        
+
+//         4. BATCH LOGIC
+//         const count = i + 1; // Current number of emails processed
+//         const isLastEmail = count === currentSheetData.length;
+
+//         counterEl.textContent = `Processing: ${count} of ${total} emails sent...`;
+//         5. Update Counter, show the break message if needed, and continue to next email
+//         if (count % BATCH_SIZE === 0 && !isLastEmail) {
+//             1. Create a special "Pause Row"
+//             const pauseMsg = document.createElement('tr');
+//             pauseMsg.id = "pauseRow"; // ID so we can find and remove it later
+//             progressBody.appendChild(pauseMsg);
+
+//             2. Countdown logic for the pause
+//             let pauseCounter = 60;
+//             while (pauseCounter > 0) {
+//                 pauseMsg.innerHTML = 
+//                 `<td colspan="2" style="padding: 8px; border-bottom: 1px solid #eee; color: blue; text-align: center;">
+//                     Pausing for batch cooldown... Resuming in ${pauseCounter} seconds.
+//                 </td>`;
+//                 await new Promise(resolve => setTimeout(resolve, 1000));
+//                 pauseCounter--;
+//             }
+
+//             3. Remove the message and continue
+//             pauseMsg.remove();
+//         }
+//         else if (!isLastEmail) {
+//             Short delay between emails to avoid overwhelming the server
+//             await new Promise(resolve => setTimeout(resolve, SHORT_DELAY));
+//         }
+//     }
+//     counterEl.textContent = `Completed: All ${total} emails processed.`;
+//     counterEl.style.color = "green";
+
+//     document.getElementById("finishSection").style.display = "block";
+
+//     if (failedRecords.length > 0) {
+//         document.getElementById('downloadFailedBtn').style.display = 'inline-block';
+//     } else {
+//         document.getElementById('downloadFailedBtn').style.display = 'none';
+//     }
+
+//     alert("Bulk sending process completed!");
+// }
+// async function sendBulkEmails() {
+//     const allRows = Array.from(document.querySelectorAll('#csvTable tbody tr'));
+//     const recipientsData = [];
+
+//     // 1. Collect all data into an array
+//     allRows.forEach(row => {
+//         const rowData = {}; // Map your CSV columns here
+//         // ... (Logic to pull data from your table cells into rowData)
+        
+//         recipientsData.push({
+//             email: row.querySelector('.email-cell').textContent,
+//             rowData: rowData,
+//             attachmentFileName: row.dataset.attachmentName // or however you store it
+//         });
+//     });
+
+//     // 2. Prepare the single Payload
+//     const payload = {
+//         auth: {
+//             user: document.getElementById("senderEmail").value,
+//             pass: document.getElementById("appPassword").value
+//         },
+//         recipients: recipientsData, // The entire array
+//         subject: document.getElementById("subjectField").value,
+//         body: document.getElementById("bodyEditor").value,
+//         senderName: document.getElementById("senderName").value,
+//         extractDir: currentExtractDir
+//     };
+
+//     // 3. Send ONCE to the server
+//     try {
+//         const response = await fetch("/api/send-bulk", {
+//             method: "POST",
+//             headers: { "Content-Type": "application/json" },
+//             body: JSON.stringify(payload)
+//         });
+//         const result = await response.json();
+        
+//         if(result.success) {
+//             alert(`Success! Batch #${result.batchId} created.`);
+//             window.location.href = "/history"; // Move to dashboard to see results
+//         }
+//     } catch (err) {
+//         console.error("Bulk Send Error:", err);
+//     }
+// }
+
+async function sendBulkEmails() {
+    const tableRows = document.querySelectorAll('#progressBody tr');
+    const recipientsData = [];
+
+    console.log("Total rows found:", tableRows.length);
+
+    tableRows.forEach((row) => {
+        // 1. Try to find the email. 
+        // If your email is in the SECOND column, use row.cells[1]
+        // If it's in the FIRST column, use row.cells[0]
+        const emailCell = row.cells[0]; 
+        
+        if (emailCell) {
+            const email = emailCell.textContent.trim();
+
+            if (email.includes('@')) {
+                recipientsData.push({
+                    email: email,
+                    rowData: rowData,
+                    attachmentFileName: row.getAttribute('data-attachment') || ""
+                });
+            }
         }
+    });
 
-        if (isPaused) {
-            counterEl.textContent = `Paused... ${i} of ${total} emails processed.`;
-            await checkPause();
-        }
+    console.log("Recipients Data built:", recipientsData);
 
-        document.getElementById("currentRecipientDisplay").textContent = `Current Recipient: ${email || '(no email found in this row)'}`;
+    if (recipientsData.length === 0) {
+        alert("No valid recipients found! Check if the email is in the second column of your table.");
+        return;
+    }
 
-        let previewBody = rawBody;
-        // Replace variables in the preview body with actual values from the row
-        Object.keys(row).forEach(key => {
-            const regex = new RegExp(`{{${key}}}`, 'g');
-            previewBody = previewBody.replace(regex, row[key]);
+    // 2. Switch UI to Live Dashboard Mode
+    // Hide the setup/preview container and show the progress container
+    document.getElementById('setup-container').classList.add('d-none');
+    document.getElementById('live-dashboard').classList.remove('d-none');
+    
+    // Reset progress markers
+    const progressBar = document.getElementById('main-progress-bar');
+    const statusText = document.getElementById('status-text');
+    progressBar.style.width = "0%";
+    statusText.innerText = "Initializing batch...";
+
+    // 3. Prepare Payload
+    const payload = {
+        auth: {
+            user: document.getElementById("senderEmail").value,
+            pass: document.getElementById("appPassword").value
+        },
+        recipients: recipientsData, // Array for backend .length
+        subject: document.getElementById("subjectField").value,
+        body: document.getElementById("bodyEditor").value,
+        senderName: document.getElementById("senderName").value,
+        extractDir: currentExtractDir // Defined globally in your script
+    };
+
+    // 4. Send to Server
+    try {
+        statusText.innerText = `Sending to ${recipientsData.length} recipients...`;
+        
+        const response = await fetch("/api/send-bulk", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
         });
 
-        document.getElementById("liveBodyContent").innerHTML = sanitizeEmailHTML(previewBody);
-        
-        // 1. UI: Create row and set to "Sending..."
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-            <td style="padding: 8px; border-bottom: 1px solid #eee;">${email}</td>
-            <td class="status-cell" style="padding: 8px; border-bottom: 1px solid #eee; color: orange;">Sending...</td>
-        `;
-        progressBody.appendChild(tr);
-        const statusCell = tr.querySelector('.status-cell');
+        const result = await response.json();
 
-        // 2. Prepare Payload
-        const payload = {
-            auth: {
-                user: document.getElementById("senderEmail").value,
-                pass: document.getElementById("appPassword").value
-            },
-            recipient: email,
-            subject: document.getElementById("subjectField").value,
-            body: document.getElementById("bodyEditor").value,
-            senderName: document.getElementById("senderName").value,
-            rowData: row,
-            extractDir: currentExtractDir,
-            attachmentFileName: row[document.getElementById('attachmentColSelect').value]
-        };
+        if (result.success) {
+            // Update Dashboard to "Finished" state
+            progressBar.style.width = "100%";
+            progressBar.classList.replace('bg-info', 'bg-success');
+            statusText.innerHTML = `✅ Successfully processed Batch #${result.batchId}.`;
+            
+            // Show a button to go to history instead of auto-redirecting
+            const historyBtn = document.getElementById('go-to-history-btn');
+            if(historyBtn) historyBtn.classList.remove('d-none');
 
-        // 3. Send Email
-        try {
-            const response = await fetch("http://localhost:3000/notify", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(payload)
-            });
-            const result = await response.json();
-
-            if(result.success) {
-                statusCell.textContent = "✅ Success";
-                statusCell.style.color = "green";
-            } else {
-                statusCell.textContent = "❌ Failed";
-                statusCell.style.color = "red";
-                failedRecords.push({ ...row, Error_Reason: result.message || 'SMTP Reject' });
-                document.getElementById('downloadFailedBtn').style.display = 'inline-block';
-            }
-        } catch (err) {
-            statusCell.textContent = "⚠️ Error";
-            failedRecords.push({ row, Error_Reason: err.message || 'Network/Server Error' });
-            document.getElementById('downloadFailedBtn').style.display = 'inline-block';
+        } else {
+            statusText.innerText = "❌ Error: " + result.message;
+            progressBar.classList.replace('bg-info', 'bg-danger');
         }
 
-        
-
-        // 4. BATCH LOGIC
-        const count = i + 1; // Current number of emails processed
-        const isLastEmail = count === currentSheetData.length;
-
-        counterEl.textContent = `Processing: ${count} of ${total} emails sent...`;
-        // 5. Update Counter, show the break message if needed, and continue to next email
-        if (count % BATCH_SIZE === 0 && !isLastEmail) {
-            // 1. Create a special "Pause Row"
-            const pauseMsg = document.createElement('tr');
-            pauseMsg.id = "pauseRow"; // ID so we can find and remove it later
-            progressBody.appendChild(pauseMsg);
-
-            // 2. Countdown logic for the pause
-            let pauseCounter = 60;
-            while (pauseCounter > 0) {
-                pauseMsg.innerHTML = 
-                `<td colspan="2" style="padding: 8px; border-bottom: 1px solid #eee; color: blue; text-align: center;">
-                    Pausing for batch cooldown... Resuming in ${pauseCounter} seconds.
-                </td>`;
-                await new Promise(resolve => setTimeout(resolve, 1000));
-                pauseCounter--;
-            }
-
-            // 3. Remove the message and continue
-            pauseMsg.remove();
-        }
-        else if (!isLastEmail) {
-            // Short delay between emails to avoid overwhelming the server
-            await new Promise(resolve => setTimeout(resolve, SHORT_DELAY));
-        }
+    } catch (err) {
+        console.error("Fetch Error:", err);
+        statusText.innerText = "⚠️ Server connection failed.";
     }
-    counterEl.textContent = `Completed: All ${total} emails processed.`;
-    counterEl.style.color = "green";
-
-    document.getElementById("finishSection").style.display = "block";
-
-    if (failedRecords.length > 0) {
-        document.getElementById('downloadFailedBtn').style.display = 'inline-block';
-    } else {
-        document.getElementById('downloadFailedBtn').style.display = 'none';
-    }
-
-    alert("Bulk sending process completed!");
 }
-
 
 function downloadFailedCSV() {
     if (failedRecords.length === 0) {
@@ -654,4 +789,172 @@ function toggleFlipCard(card) {
     // Flip the new card
     flipCardDiv.classList.add('flipped');
     currentFlippedCard = flipCardDiv;
+}
+
+const signUpButton = document.getElementById('signUp');
+const signInButton = document.getElementById('signIn');
+const container = document.getElementById('authContainer');
+
+signUpButton.addEventListener('click', () => {
+    container.classList.add("right-panel-active");
+});
+
+signInButton.addEventListener('click', () => {
+    container.classList.remove("right-panel-active");
+});
+
+// Attach form event listeners
+const signupForm = document.getElementById('signupForm');
+const loginForm = document.getElementById('loginForm');
+
+signupForm?.addEventListener('submit', (event) => handleAuth(event, 'signup'));
+loginForm?.addEventListener('submit', (event) => handleAuth(event, 'login'));
+
+document.getElementById('signupPasswordToggle')?.addEventListener('click', () => togglePasswordVisibility('signupPassword', 'signupPasswordToggle'));
+document.getElementById('loginPasswordToggle')?.addEventListener('click', () => togglePasswordVisibility('loginPassword', 'loginPasswordToggle'));
+
+function togglePasswordVisibility(inputId, buttonId) {
+    const input = document.getElementById(inputId);
+    const button = document.getElementById(buttonId);
+    const icon = button?.querySelector('i');
+    if (!input || !button || !icon) return;
+
+    if (input.type === 'password') {
+        input.type = 'text';
+        icon.classList.replace('bi-eye-fill', 'bi-eye-slash-fill');
+    } else {
+        input.type = 'password';
+        icon.classList.replace('bi-eye-slash-fill', 'bi-eye-fill');
+    }
+}
+
+async function handleAuth(event, type) {
+    event.preventDefault();
+    const form = event.target;
+    const formData = new FormData(form);
+    const data = Object.fromEntries(formData.entries());
+
+    document.querySelectorAll('.input-error').forEach(el => el.classList.remove('input-error'));
+    document.querySelectorAll('.error-message').forEach(el => el.remove());
+
+    try {
+        const response = await fetch(type === 'signup' ? '/register' : '/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+
+        const text = await response.text();
+        let result;
+        try {
+            result = JSON.parse(text);
+        } catch (parseError) {
+            console.error('Failed to parse auth response:', text, parseError);
+            alert('Unexpected server response. Please refresh and try again.');
+            return;
+        }
+
+        if (!result.success) {
+            const targetInput = form.querySelector(`input[name="${result.field}"]`);
+            if (targetInput) {
+                targetInput.classList.add('input-error');
+
+                const errorDiv = document.createElement('div');
+                errorDiv.className = 'error-message';
+                errorDiv.innerHTML = `<i class="bi bi-exclamation-triangle-fill"></i> ${result.message}`;
+                targetInput.insertAdjacentElement('afterend', errorDiv);
+            }
+        }
+        else {
+            window.location.href = 'home.html';
+        }
+    } catch (error) {
+        console.error('Error in handleAuth:', error);
+        alert('An error occurred. Please try again.');
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    // Activate signup mode when the auth page is opened with #signup
+    if (window.location.hash === '#signup') {
+        container.classList.add('right-panel-active');
+    } else if (window.location.hash === '#login') {
+        container.classList.remove('right-panel-active');
+    }
+});
+
+document.addEventListener('DOMContentLoaded', loadBatches);
+
+async function loadBatches() {
+    try {
+        const response = await fetch('/api/batches');
+        const batches = await response.json();
+        const list = document.getElementById('batchList');
+    
+        if (batches.length === 0) {
+            list.innerHTML = '<div class="p-4 text-center text-muted">No history found.</div>';
+            return;
+        }
+
+        list.innerHTML = batches.map(batch => `
+            <div class="list-group-item batch-item p-3" onclick="loadDetails(${batch.BatchID}, this)">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h6 class="mb-1 fw-bold text-truncate" style="max-width: 150px;">${batch.Subject || 'No Subject'}</h6>
+                    <small class="text-muted" style="font-size: 0.7rem;">${new Date(batch.SentDate).toLocaleDateString()}</small>
+                </div>
+                <div class="d-flex justify-content-between small mt-2">
+                    <span>ID: #${batch.BatchID}</span>
+                    <span class="fw-bold">${batch.SuccessCount}/${batch.TotalRecipients} Sent</span>
+                </div>
+            </div>
+        `).join('');
+    } catch (error) {
+        console.error('Error loading batches:', error);
+        document.getElementById('batchList').innerHTML = '<div class="p-4 text-center text-danger">Failed to load history.</div>';
+    }
+}
+
+async function loadDetails(batchId, element) {
+    // 1. UI Highlight Toggle
+    document.querySelectorAll('.batch-item').forEach(el => el.classList.remove('active'));
+    element.classList.add('active');
+
+    // 2. Show the Detail Container, Hide Placeholder
+    document.getElementById('details-placeholder').classList.add('d-none');
+    const detailsContent = document.getElementById('details-content');
+    detailsContent.classList.remove('d-none');
+
+    // 3. Fetch Data
+    const response = await fetch(`/api/batch-details/${batchId}`);
+    const logs = await response.json();
+
+    // 4. Map Data to the UI
+    const batchData = {
+        subject: element.querySelector('h6').innerText,
+        date: element.querySelector('small').innerText,
+        total: logs.length,
+        success: logs.filter(l => l.Status === 'Success').length
+    };
+
+    const percent = batchData.total > 0 ? Math.round((batchData.success / batchData.total) * 100) : 0;
+
+    // Update Header and Progress
+    document.getElementById('detail-subject').innerText = batchData.subject;
+    document.getElementById('detail-date').innerText = batchData.date;
+    document.getElementById('detail-percent').innerText = `${percent}%`;
+    document.getElementById('detail-progress-bar').style.width = `${percent}%`;
+
+    // Map logs to Table Rows
+    const logsBody = document.getElementById('logs-body');
+    logsBody.innerHTML = logs.map(log => `
+        <tr>
+            <td class="small fw-bold">${log.RecipientEmail}</td>
+            <td>
+                <span class="badge ${log.Status === 'Success' ? 'status-badge-success' : 'status-badge-failed'} rounded-pill">
+                    ${log.Status}
+                </span>
+            </td>
+            <td class="text-muted small">${log.ErrorMessage || 'Delivered successfully'}</td>
+        </tr>
+    `).join('');
 }
