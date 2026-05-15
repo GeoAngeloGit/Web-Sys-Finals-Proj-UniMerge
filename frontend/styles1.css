@@ -208,3 +208,16 @@
 
 .status-badge-success { background-color: #d4edda; color: #155724; }
 .status-badge-failed { background-color: #f8d7da; color: #721c24; }
+
+.list-group-item.batch-item.active {
+    background-color: #e3f2fd !important;
+    border-color: #0d6efd !important;
+    color: #0b1a30 !important;
+}
+
+.list-group-item.batch-item.active h6,
+.list-group-item.batch-item.active span,
+.list-group-item.batch-item.active small {
+    color: #0b1a30 !important; /* Keeps titles, dates, and metrics 100% scannable */
+    opacity: 1 !important;     /* Bypasses default bootstrap opacity reductions */
+}

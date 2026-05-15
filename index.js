@@ -164,8 +164,19 @@ app.post('/login', async (req, res) => {
 });
 
 app.get('/logout', (req, res) => {
-    req.session.destroy(() => {
-        res.redirect('/');
+    // 1. Destroy the session container completely
+    req.session.destroy((err) => {
+        if (err) {
+            console.error("Error during session destruction:", err);
+            return res.status(500).send("Could not log out. Please try again.");
+        }
+        
+        // 2. Clear the cookie on the browser side to be absolutely clean
+        res.clearCookie('connect.sid'); // Use your actual session cookie name if different
+
+        // 3. Force redirect the browser specifically to your static home file path
+        console.log("Session destroyed successfully. Redirecting to landing page...");
+        res.redirect('/frontend/home.html'); 
     });
 });
 
