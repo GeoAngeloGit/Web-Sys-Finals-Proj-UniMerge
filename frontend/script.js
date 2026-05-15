@@ -31,6 +31,63 @@ function handleBackNav() {
 }
 
 
+// Load saved configuration on page load
+async function loadSavedConfig() {
+    try {
+        const response = await fetch("/api/get-config", {
+            method: "GET",
+            credentials: 'include'
+        });
+
+        const result = await response.json();
+
+        if (result.success && result.config) {
+            const config = result.config;
+            const savedEmail = config.SMTP_Email || config.SenderEmail;
+            const savedPassword = config.EncryptedAppPassword || config.AppPassword;
+
+            if (savedEmail) {
+                document.getElementById("senderEmail").value = savedEmail;
+            }
+            if (savedPassword) {
+                document.getElementById("appPassword").value = savedPassword;
+            }
+
+            // Auto-verify the saved credentials
+            autoVerifySavedCredentials(savedEmail, savedPassword);
+        }
+    } catch (error) {
+        console.error("Error loading saved config:", error);
+    }
+}
+
+// Auto-verify saved credentials
+async function autoVerifySavedCredentials(email, password) {
+    const verifyBtn = document.getElementById("verifyBtn");
+    const uploadBtn = document.getElementById("uploadBtn");
+
+    try {
+        const response = await fetch("http://localhost:3000/verify-connection", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ user: email, pass: password }),
+            credentials: 'include'
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            verifyBtn.textContent = "✅ Verified";
+            verifyBtn.style.backgroundColor = "#28a745";
+            verifyBtn.style.color = "white";
+            uploadBtn.disabled = false;
+            uploadBtn.title = "Credentials verified. You can now upload files.";
+        }
+    } catch (error) {
+        console.error("Error auto-verifying credentials:", error);
+    }
+}
+
 async function verifyCredentials() {
     const user = document.getElementById("senderEmail").value;
     const pass = document.getElementById("appPassword").value;
@@ -424,194 +481,6 @@ function switchToDashboard() {
     sendBulkEmails();
 }
 
-
-// async function sendBulkEmails(event) {
-//     if (event) event.preventDefault();
-//     failedRecords = []; // Reset failed records at the start of each send attempt
-    
-//     const emailCol = document.getElementById('emailColSelect').value;
-//     const progressBody = document.getElementById('progressBody');
-
-//     const BATCH_SIZE = 20; // Set your batch size here
-//     const LONG_DELAY = 60000; // 60 seconds in milliseconds
-//     const SHORT_DELAY = 2000; // 2 seconds between emails
-
-//     Show the progress card and clear previous results
-//     const total = currentSheetData.length;
-//     const counterEl = document.getElementById('overallCounter');
-//     document.getElementById('progressCard').style.display = 'block';
-//     progressBody.innerHTML = ''; 
-    
-
-//     Loop through each row of the current sheet data
-//     for (let i = 0; i < currentSheetData.length; i++) {
-//         const row = currentSheetData[i];
-//         const email = row[emailCol];
-//         const rawBody = document.getElementById('bodyEditor').value;
-
-//         if(shouldStopSending) {
-//             counterEl.textContent = `Process stopped by user. ${i} of ${total} emails processed.`;
-//             counterEl.style.color = "Red";
-//             break;
-//         }
-
-//         if (isPaused) {
-//             counterEl.textContent = `Paused... ${i} of ${total} emails processed.`;
-//             await checkPause();
-//         }
-
-//         document.getElementById("currentRecipientDisplay").textContent = `Current Recipient: ${email || '(no email found in this row)'}`;
-
-//         let previewBody = rawBody;
-//         Replace variables in the preview body with actual values from the row
-//         Object.keys(row).forEach(key => {
-//             const regex = new RegExp(`{{${key}}}`, 'g');
-//             previewBody = previewBody.replace(regex, row[key]);
-//         });
-
-//         document.getElementById("liveBodyContent").innerHTML = sanitizeEmailHTML(previewBody);
-        
-//         1. UI: Create row and set to "Sending..."
-//         const tr = document.createElement('tr');
-//         tr.innerHTML = `
-//             <td style="padding: 8px; border-bottom: 1px solid #eee;">${email}</td>
-//             <td class="status-cell" style="padding: 8px; border-bottom: 1px solid #eee; color: orange;">Sending...</td>
-//         `;
-//         progressBody.appendChild(tr);
-//         const statusCell = tr.querySelector('.status-cell');
-
-//         2. Prepare Payload
-//         const payload = {
-//             auth: {
-//                 user: document.getElementById("senderEmail").value,
-//                 pass: document.getElementById("appPassword").value
-//             },
-//             recipients: allRowsFromCSV,
-//             subject: document.getElementById("subjectField").value,
-//             body: document.getElementById("bodyEditor").value,
-//             senderName: document.getElementById("senderName").value,
-//             rowData: row,
-//             extractDir: currentExtractDir,
-//             attachmentFileName: row[document.getElementById('attachmentColSelect').value]
-//         };
-
-//         3. Send Email
-//         try {
-//             const response = await fetch("http://localhost:3000/api/send-bulk", {
-//                 method: "POST",
-//                 headers: { "Content-Type": "application/json" },
-//                 body: JSON.stringify(payload)
-//             });
-//             const result = await response.json();
-
-//             if(result.success) {
-//                 statusCell.textContent = "✅ Success";
-//                 statusCell.style.color = "green";
-//             } else {
-//                 statusCell.textContent = "❌ Failed";
-//                 statusCell.style.color = "red";
-//                 failedRecords.push({ ...row, Error_Reason: result.message || 'SMTP Reject' });
-//                 document.getElementById('downloadFailedBtn').style.display = 'inline-block';
-//             }
-//         } catch (err) {
-//             statusCell.textContent = "⚠️ Error";
-//             failedRecords.push({ row, Error_Reason: err.message || 'Network/Server Error' });
-//             document.getElementById('downloadFailedBtn').style.display = 'inline-block';
-//         }
-
-        
-
-//         4. BATCH LOGIC
-//         const count = i + 1; // Current number of emails processed
-//         const isLastEmail = count === currentSheetData.length;
-
-//         counterEl.textContent = `Processing: ${count} of ${total} emails sent...`;
-//         5. Update Counter, show the break message if needed, and continue to next email
-//         if (count % BATCH_SIZE === 0 && !isLastEmail) {
-//             1. Create a special "Pause Row"
-//             const pauseMsg = document.createElement('tr');
-//             pauseMsg.id = "pauseRow"; // ID so we can find and remove it later
-//             progressBody.appendChild(pauseMsg);
-
-//             2. Countdown logic for the pause
-//             let pauseCounter = 60;
-//             while (pauseCounter > 0) {
-//                 pauseMsg.innerHTML = 
-//                 `<td colspan="2" style="padding: 8px; border-bottom: 1px solid #eee; color: blue; text-align: center;">
-//                     Pausing for batch cooldown... Resuming in ${pauseCounter} seconds.
-//                 </td>`;
-//                 await new Promise(resolve => setTimeout(resolve, 1000));
-//                 pauseCounter--;
-//             }
-
-//             3. Remove the message and continue
-//             pauseMsg.remove();
-//         }
-//         else if (!isLastEmail) {
-//             Short delay between emails to avoid overwhelming the server
-//             await new Promise(resolve => setTimeout(resolve, SHORT_DELAY));
-//         }
-//     }
-//     counterEl.textContent = `Completed: All ${total} emails processed.`;
-//     counterEl.style.color = "green";
-
-//     document.getElementById("finishSection").style.display = "block";
-
-//     if (failedRecords.length > 0) {
-//         document.getElementById('downloadFailedBtn').style.display = 'inline-block';
-//     } else {
-//         document.getElementById('downloadFailedBtn').style.display = 'none';
-//     }
-
-//     alert("Bulk sending process completed!");
-// }
-// async function sendBulkEmails() {
-//     const allRows = Array.from(document.querySelectorAll('#csvTable tbody tr'));
-//     const recipientsData = [];
-
-//     // 1. Collect all data into an array
-//     allRows.forEach(row => {
-//         const rowData = {}; // Map your CSV columns here
-//         // ... (Logic to pull data from your table cells into rowData)
-        
-//         recipientsData.push({
-//             email: row.querySelector('.email-cell').textContent,
-//             rowData: rowData,
-//             attachmentFileName: row.dataset.attachmentName // or however you store it
-//         });
-//     });
-
-//     // 2. Prepare the single Payload
-//     const payload = {
-//         auth: {
-//             user: document.getElementById("senderEmail").value,
-//             pass: document.getElementById("appPassword").value
-//         },
-//         recipients: recipientsData, // The entire array
-//         subject: document.getElementById("subjectField").value,
-//         body: document.getElementById("bodyEditor").value,
-//         senderName: document.getElementById("senderName").value,
-//         extractDir: currentExtractDir
-//     };
-
-//     // 3. Send ONCE to the server
-//     try {
-//         const response = await fetch("/api/send-bulk", {
-//             method: "POST",
-//             headers: { "Content-Type": "application/json" },
-//             body: JSON.stringify(payload)
-//         });
-//         const result = await response.json();
-        
-//         if(result.success) {
-//             alert(`Success! Batch #${result.batchId} created.`);
-//             window.location.href = "/history"; // Move to dashboard to see results
-//         }
-//     } catch (err) {
-//         console.error("Bulk Send Error:", err);
-//     }
-// }
-
 async function sendBulkEmails(event) {
     if (event) event.preventDefault();
     failedRecords = []; 
@@ -626,6 +495,24 @@ async function sendBulkEmails(event) {
     const counterEl = document.getElementById('overallCounter');
     document.getElementById('progressCard').style.display = 'block';
     progressBody.innerHTML = ''; 
+
+    // --- ADD THIS INSIDE YOUR SEND FUNCTION TO BACK UP SETTINGS LIVE ---
+    const configPayload = {
+        senderEmail: document.getElementById("senderEmail").value,
+        senderName: document.getElementById("senderName").value,
+        appPassword: document.getElementById("appPassword").value,
+        emailCol: document.getElementById('emailColSelect')?.value || '',
+        attachmentCol: document.getElementById('attachmentColSelect')?.value || ''
+    };
+
+    // Send it to the database silently in the background
+    fetch("/api/save-config", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(configPayload)
+    }).then(res => res.json())
+    .then(data => console.log("User workspace config sync status:", data.message))
+    .catch(err => console.error("Config background sync failed:", err));
 
     // --- NEW: STEP 0 - INITIALIZE BATCH IN DATABASE ---
     let currentBatchId = null;
@@ -948,11 +835,6 @@ async function loadBatches() {
         const response = await fetch('/api/batches');
         const batches = await response.json();
         const list = document.getElementById('batch-list');
-    
-        if (!list) {
-            console.error('Batch list container not found in the DOM.');
-            return; 
-        }
 
         if (batches && !Array.isArray(batches) && Array.isArray(batches.data)) {
             batches = batches.data;
@@ -980,51 +862,6 @@ async function loadBatches() {
         document.getElementById('batchList').innerHTML = '<div class="p-4 text-center text-danger">Failed to load history.</div>';
     }
 }
-
-// async function loadDetails(batchId, element) {
-//     // 1. UI Highlight Toggle
-//     document.querySelectorAll('.batch-item').forEach(el => el.classList.remove('active'));
-//     element.classList.add('active');
-
-//     // 2. Show the Detail Container, Hide Placeholder
-//     document.getElementById('details-placeholder').classList.add('d-none');
-//     const detailsContent = document.getElementById('details-content');
-//     detailsContent.classList.remove('d-none');
-
-//     // 3. Fetch Data
-//     const response = await fetch(`/api/batch-details/${batchId}`);
-//     const logs = await response.json();
-
-//     // 4. Map Data to the UI
-//     const batchData = {
-//         subject: element.querySelector('h6').innerText,
-//         date: element.querySelector('small').innerText,
-//         total: logs.length,
-//         success: logs.filter(l => l.Status === 'Success').length
-//     };
-
-//     const percent = batchData.total > 0 ? Math.round((batchData.success / batchData.total) * 100) : 0;
-
-//     // Update Header and Progress
-//     document.getElementById('detail-subject').innerText = batchData.subject;
-//     document.getElementById('detail-date').innerText = batchData.date;
-//     document.getElementById('detail-percent').innerText = `${percent}%`;
-//     document.getElementById('detail-progress-bar').style.width = `${percent}%`;
-
-//     // Map logs to Table Rows
-//     const logsBody = document.getElementById('logs-body');
-//     logsBody.innerHTML = logs.map(log => `
-//         <tr>
-//             <td class="small fw-bold">${log.RecipientEmail}</td>
-//             <td>
-//                 <span class="badge ${log.Status === 'Success' ? 'status-badge-success' : 'status-badge-failed'} rounded-pill">
-//                     ${log.Status}
-//                 </span>
-//             </td>
-//             <td class="text-muted small">${log.ErrorMessage || 'Delivered successfully'}</td>
-//         </tr>
-//     `).join('');
-// }'
 
 async function loadDetails(batchId, element) {
     try {
@@ -1103,3 +940,9 @@ async function loadDetails(batchId, element) {
         console.error("Error executing loadDetails configuration loop:", err);
     }
 }
+
+document.addEventListener('DOMContentLoaded', () => {
+    if (document.getElementById('senderEmail')) {
+        loadSavedConfig();
+    }
+});
