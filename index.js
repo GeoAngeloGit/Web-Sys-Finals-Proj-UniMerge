@@ -1,4 +1,5 @@
 import { createTransport } from "nodemailer";
+import nodemailer from 'nodemailer';
 import express from "express";
 import cors from "cors";
 import multer from "multer";
@@ -264,75 +265,75 @@ app.get("/api/user-status", (req, res) => {
 //     });
 // });
 
-app.post('/api/send-bulk', async (req, res) => {
-    console.log("--- New Batch Request Received ---");
-    console.log("Recipients Count:", req.body.recipients ? req.body.recipients.length : "UNDEFINED");
-    const { subject, recipients, body, auth, senderName, extractDir } = req.body;
-    const userId = req.session.userId;
+// app.post('/api/send-bulk', async (req, res) => {
+//     console.log("--- New Batch Request Received ---");
+//     console.log("Recipients Count:", req.body.recipients ? req.body.recipients.length : "UNDEFINED");
+//     const { subject, recipients, body, auth, senderName, extractDir } = req.body;
+//     const userId = req.session.userId;
 
-    // Safety: If not logged in, we can't save to the database
-    if (!userId) {
-        console.error("Error: No UserID in session!");
-        return res.status(401).json({ success: false, message: "Please log in again." });
-    }
+//     // Safety: If not logged in, we can't save to the database
+//     if (!userId) {
+//         console.error("Error: No UserID in session!");
+//         return res.status(401).json({ success: false, message: "Please log in again." });
+//     }
 
-    // Safety check
-    if (!recipients || !Array.isArray(recipients)) {
-        return res.status(400).json({ success: false, message: "No recipients provided" });
-    }
+//     // Safety check
+//     if (!recipients || !Array.isArray(recipients)) {
+//         return res.status(400).json({ success: false, message: "No recipients provided" });
+//     }
 
-    // 1. Create the Parent Batch
-    const batchQuery = 'INSERT INTO batches (UserID, Subject, TotalRecipients) VALUES (?, ?, ?)';
+//     // 1. Create the Parent Batch
+//     const batchQuery = 'INSERT INTO batches (UserID, Subject, TotalRecipients) VALUES (?, ?, ?)';
     
-    database.query(batchQuery, [userId, subject, recipients.length], async (err, result) => {
-        if (err) return res.status(500).json({ success: false, message: "DB Batch Error" });
+//     database.query(batchQuery, [userId, subject, recipients.length], async (err, result) => {
+//         if (err) return res.status(500).json({ success: false, message: "DB Batch Error" });
 
-        const batchId = result.insertId;
-        let successCount = 0;
+//         const batchId = result.insertId;
+//         let successCount = 0;
 
-        const transporter = createTransport({
-            service: "gmail",
-            auth: { user: auth.user, pass: auth.pass }
-        });
+//         const transporter = createTransport({
+//             service: "gmail",
+//             auth: { user: auth.user, pass: auth.pass }
+//         });
 
-        // 2. Loop through the array
-        for (const person of recipients) {
-            let status = 'Success';
-            let errorMsg = null;
+//         // 2. Loop through the array
+//         for (const person of recipients) {
+//             let status = 'Success';
+//             let errorMsg = null;
 
-            try {
-                // Personalization Logic
-                let finalBody = body;
-                Object.keys(person.rowData).forEach(key => {
-                    const placeholder = new RegExp(`{{${key}}}`, 'g');
-                    finalBody = finalBody.replace(placeholder, person.rowData[key]);
-                });
+//             try {
+//                 // Personalization Logic
+//                 let finalBody = body;
+//                 Object.keys(person.rowData).forEach(key => {
+//                     const placeholder = new RegExp(`{{${key}}}`, 'g');
+//                     finalBody = finalBody.replace(placeholder, person.rowData[key]);
+//                 });
 
-                await transporter.sendMail({
-                    from: `"${senderName}" <${auth.user}>`,
-                    to: person.email,
-                    subject: subject,
-                    html: finalBody
-                    // Add attachment logic here
-                });
-                successCount++;
+//                 await transporter.sendMail({
+//                     from: `"${senderName}" <${auth.user}>`,
+//                     to: person.email,
+//                     subject: subject,
+//                     html: finalBody
+//                     // Add attachment logic here
+//                 });
+//                 successCount++;
 
-            } catch (e) {
-                status = 'Failed';
-                errorMsg = e.message;
-            }
+//             } catch (e) {
+//                 status = 'Failed';
+//                 errorMsg = e.message;
+//             }
 
-            // 3. Save individual Detail linked to BatchId
-            const logQuery = "INSERT INTO batch_details (BatchID, RecipientEmail, Status, ErrorMessage) VALUES (?, ?, ?, ?)";
-            database.query(logQuery, [batchId, person.email, status, errorMsg]);
-        }
+//             // 3. Save individual Detail linked to BatchId
+//             const logQuery = "INSERT INTO batch_details (BatchID, RecipientEmail, Status, ErrorMessage) VALUES (?, ?, ?, ?)";
+//             database.query(logQuery, [batchId, person.email, status, errorMsg]);
+//         }
 
-        // 4. Update total success count
-        database.query("UPDATE batches SET SuccessCount = ? WHERE BatchID = ?", [successCount, batchId], () => {
-            res.json({ success: true, batchId });
-        });
-    });
-});
+//         // 4. Update total success count
+//         database.query("UPDATE batches SET SuccessCount = ? WHERE BatchID = ?", [successCount, batchId], () => {
+//             res.json({ success: true, batchId });
+//         });
+//     });
+// });
 
 app.get('/api/batches', (req, res) => {
     const userId = req.session.userId;
@@ -343,13 +344,13 @@ app.get('/api/batches', (req, res) => {
             console.error('Database error:', err);
             return res.status(500).json({ success: false, message: 'Server error. Try again later.' });
         }
-        res.json({ success: true, batches: results });
+        res.json(results);
     })
 });
 
 app.get('/api/batch-details/:batchId', (req, res) => {
     const { batchId } = req.params;
-    const sql = "SELECT * FROM bacth-details WHERE BatchID = ?";
+    const sql = "SELECT * FROM batch_details WHERE BatchID = ?";
 
     database.query(sql, [batchId], (err, results) => {
         if (err) {
@@ -358,6 +359,56 @@ app.get('/api/batch-details/:batchId', (req, res) => {
         }
         res.json({ success: true, details: results });
     });
+});
+
+// 1. Initialize the Batch once
+app.post('/api/init-batch', (req, res) => {
+    const { subject, totalRecipients } = req.body;
+    const userId = req.session.userId;
+    
+    const sql = "INSERT INTO batches (UserID, Subject, TotalRecipients, SuccessCount) VALUES (?, ?, ?, 0)";
+    database.query(sql, [userId, subject, totalRecipients], (err, result) => {
+        if (err) return res.status(500).json({ success: false });
+        res.json({ success: true, batchId: result.insertId });
+    });
+});
+
+// 2. Send one email and log to batch_details
+app.post('/api/send-single', async (req, res) => {
+    const { batchId, recipient, subject, body, auth, senderName } = req.body;
+    
+    try {
+        const transporter = nodemailer.createTransport({
+            service: 'gmail',
+            auth: { user: auth.user, pass: auth.pass }
+        });
+
+        await transporter.sendMail({
+            from: `"${senderName}" <${auth.user}>`,
+            to: recipient,
+            subject: subject,
+            html: body
+        });
+
+        // Log SUCCESS to database
+        const logSql = "INSERT INTO batch_details (BatchID, RecipientEmail, Status) VALUES (?, ?, 'Success')";
+        database.query(logSql, [batchId, recipient]);
+
+        res.json({ success: true });
+    } catch (error) {
+        // Log FAILURE to database
+        const logSql = "INSERT INTO batch_details (BatchID, RecipientEmail, Status, ErrorMessage) VALUES (?, ?, 'Failed', ?)";
+        database.query(logSql, [batchId, recipient, error.message]);
+
+        res.json({ success: false, message: error.message });
+    }
+});
+
+// 3. Final count update
+app.post('/api/update-batch-count', (req, res) => {
+    const { batchId, successCount } = req.body;
+    database.query("UPDATE batches SET SuccessCount = ? WHERE BatchID = ?", [successCount, batchId]);
+    res.json({ success: true });
 });
 
 app.post("/verify-connection", async (req, res) => {

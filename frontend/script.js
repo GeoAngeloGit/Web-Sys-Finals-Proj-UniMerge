@@ -612,93 +612,144 @@ function switchToDashboard() {
 //     }
 // }
 
-async function sendBulkEmails() {
-    const tableRows = document.querySelectorAll('#progressBody tr');
-    const recipientsData = [];
-
-    console.log("Total rows found:", tableRows.length);
-
-    tableRows.forEach((row) => {
-        // 1. Try to find the email. 
-        // If your email is in the SECOND column, use row.cells[1]
-        // If it's in the FIRST column, use row.cells[0]
-        const emailCell = row.cells[0]; 
-        
-        if (emailCell) {
-            const email = emailCell.textContent.trim();
-
-            if (email.includes('@')) {
-                recipientsData.push({
-                    email: email,
-                    rowData: rowData,
-                    attachmentFileName: row.getAttribute('data-attachment') || ""
-                });
-            }
-        }
-    });
-
-    console.log("Recipients Data built:", recipientsData);
-
-    if (recipientsData.length === 0) {
-        alert("No valid recipients found! Check if the email is in the second column of your table.");
-        return;
-    }
-
-    // 2. Switch UI to Live Dashboard Mode
-    // Hide the setup/preview container and show the progress container
-    document.getElementById('setup-container').classList.add('d-none');
-    document.getElementById('live-dashboard').classList.remove('d-none');
+async function sendBulkEmails(event) {
+    if (event) event.preventDefault();
+    failedRecords = []; 
     
-    // Reset progress markers
-    const progressBar = document.getElementById('main-progress-bar');
-    const statusText = document.getElementById('status-text');
-    progressBar.style.width = "0%";
-    statusText.innerText = "Initializing batch...";
+    const emailCol = document.getElementById('emailColSelect').value;
+    const progressBody = document.getElementById('progressBody');
+    const BATCH_SIZE = 20; 
+    const LONG_DELAY = 60000; 
+    const SHORT_DELAY = 2000; 
 
-    // 3. Prepare Payload
-    const payload = {
-        auth: {
-            user: document.getElementById("senderEmail").value,
-            pass: document.getElementById("appPassword").value
-        },
-        recipients: recipientsData, // Array for backend .length
-        subject: document.getElementById("subjectField").value,
-        body: document.getElementById("bodyEditor").value,
-        senderName: document.getElementById("senderName").value,
-        extractDir: currentExtractDir // Defined globally in your script
-    };
+    const total = currentSheetData.length;
+    const counterEl = document.getElementById('overallCounter');
+    document.getElementById('progressCard').style.display = 'block';
+    progressBody.innerHTML = ''; 
 
-    // 4. Send to Server
+    // --- NEW: STEP 0 - INITIALIZE BATCH IN DATABASE ---
+    let currentBatchId = null;
     try {
-        statusText.innerText = `Sending to ${recipientsData.length} recipients...`;
-        
-        const response = await fetch("/api/send-bulk", {
+        const initRes = await fetch("/api/init-batch", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload)
+            body: JSON.stringify({
+                subject: document.getElementById("subjectField").value,
+                totalRecipients: total
+            })
         });
+        const initData = await initRes.json();
+        currentBatchId = initData.batchId;
+    } catch (e) {
+        console.error("Failed to start batch tracking:", e);
+    }
 
-        const result = await response.json();
+    let successCount = 0;
 
-        if (result.success) {
-            // Update Dashboard to "Finished" state
-            progressBar.style.width = "100%";
-            progressBar.classList.replace('bg-info', 'bg-success');
-            statusText.innerHTML = `✅ Successfully processed Batch #${result.batchId}.`;
-            
-            // Show a button to go to history instead of auto-redirecting
-            const historyBtn = document.getElementById('go-to-history-btn');
-            if(historyBtn) historyBtn.classList.remove('d-none');
-
-        } else {
-            statusText.innerText = "❌ Error: " + result.message;
-            progressBar.classList.replace('bg-info', 'bg-danger');
+    for (let i = 0; i < currentSheetData.length; i++) {
+        if(shouldStopSending) {
+            counterEl.textContent = `Stopped. ${i} of ${total} processed.`;
+            break;
         }
 
-    } catch (err) {
-        console.error("Fetch Error:", err);
-        statusText.innerText = "⚠️ Server connection failed.";
+        if (isPaused) {
+            counterEl.textContent = `Paused... ${i} of ${total} processed.`;
+            await checkPause();
+        }
+
+        const row = currentSheetData[i];
+        const email = row[emailCol];
+        const rawBody = document.getElementById('bodyEditor').value;
+
+        document.getElementById("currentRecipientDisplay").textContent = `Current: ${email}`;
+
+        // Personalization logic
+        let previewBody = rawBody;
+        Object.keys(row).forEach(key => {
+            const regex = new RegExp(`{{${key}}}`, 'g');
+            previewBody = previewBody.replace(regex, row[key]);
+        });
+
+        document.getElementById("liveBodyContent").innerHTML = sanitizeEmailHTML(previewBody);
+        
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${email}</td><td class="status-cell" style="color: orange;">Sending...</td>`;
+        progressBody.appendChild(tr);
+        const statusCell = tr.querySelector('.status-cell');
+
+        // Prepare Payload (Aligned with DB expectations)
+        const payload = {
+            batchId: currentBatchId, // Pass the ID so the backend logs to the right batch
+            auth: {
+                user: document.getElementById("senderEmail").value,
+                pass: document.getElementById("appPassword").value
+            },
+            recipient: email,
+            subject: document.getElementById("subjectField").value,
+            body: previewBody,
+            senderName: document.getElementById("senderName").value,
+            attachmentFileName: row[document.getElementById('attachmentColSelect').value]
+        };
+
+        try {
+            const response = await fetch("/api/send-single", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload)
+            });
+            const result = await response.json();
+
+            if(result.success) {
+                statusCell.textContent = "✅ Success";
+                statusCell.style.color = "green";
+                successCount++;
+            } else {
+                statusCell.textContent = "❌ Failed";
+                statusCell.style.color = "red";
+                failedRecords.push({ ...row, Error_Reason: result.message });
+            }
+        } catch (err) {
+            statusCell.textContent = "⚠️ Error";
+
+            // Add the failed row to the array so it can be downloaded
+            failedRecords.push({ 
+                ...row, 
+                Error_Reason: err.message || 'Server Connection Error' 
+            });
+            
+            // Force the button to show
+            document.getElementById('downloadFailedBtn').style.display = 'inline-block';
+        }
+
+        // BATCH & DELAY LOGIC
+        const count = i + 1;
+        counterEl.textContent = `Processing: ${count} of ${total}...`;
+
+        if (count % BATCH_SIZE === 0 && count !== total) {
+            let pauseCounter = 60;
+            const pauseRow = document.createElement('tr');
+            progressBody.appendChild(pauseRow);
+            while (pauseCounter > 0) {
+                pauseRow.innerHTML = `<td colspan="2" style="color: blue; text-align: center;">Cooldown: Resuming in ${pauseCounter}s</td>`;
+                await new Promise(r => setTimeout(r, 1000));
+                pauseCounter--;
+            }
+            pauseRow.remove();
+        } else if (count !== total) {
+            await new Promise(r => setTimeout(r, SHORT_DELAY));
+        }
     }
+
+    // Final Success Count Update
+    fetch("/api/update-batch-count", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ batchId: currentBatchId, successCount })
+    });
+
+    counterEl.textContent = `Completed!`;
+    document.getElementById("finishSection").style.display = "block";
+    alert("Process completed!");
 }
 
 function downloadFailedCSV() {
@@ -795,13 +846,17 @@ const signUpButton = document.getElementById('signUp');
 const signInButton = document.getElementById('signIn');
 const container = document.getElementById('authContainer');
 
-signUpButton.addEventListener('click', () => {
-    container.classList.add("right-panel-active");
-});
+if (signUpButton) {
+    signUpButton.addEventListener('click', () => {
+        container.classList.add("right-panel-active");
+    });
+}
 
-signInButton.addEventListener('click', () => {
-    container.classList.remove("right-panel-active");
-});
+if (signInButton) {
+    signInButton.addEventListener('click', () => {
+        container.classList.remove("right-panel-active");
+    });
+}
 
 // Attach form event listeners
 const signupForm = document.getElementById('signupForm');
@@ -883,15 +938,27 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
-document.addEventListener('DOMContentLoaded', loadBatches);
+document.addEventListener('DOMContentLoaded', () => {
+    console.log("History Page DOM fully loaded. Triggering engine...");
+    loadBatches();
+}); 
 
 async function loadBatches() {
     try {
         const response = await fetch('/api/batches');
         const batches = await response.json();
-        const list = document.getElementById('batchList');
+        const list = document.getElementById('batch-list');
     
-        if (batches.length === 0) {
+        if (!list) {
+            console.error('Batch list container not found in the DOM.');
+            return; 
+        }
+
+        if (batches && !Array.isArray(batches) && Array.isArray(batches.data)) {
+            batches = batches.data;
+        }
+
+        if (!Array.isArray(batches) || batches.length === 0) {
             list.innerHTML = '<div class="p-4 text-center text-muted">No history found.</div>';
             return;
         }
@@ -914,47 +981,125 @@ async function loadBatches() {
     }
 }
 
+// async function loadDetails(batchId, element) {
+//     // 1. UI Highlight Toggle
+//     document.querySelectorAll('.batch-item').forEach(el => el.classList.remove('active'));
+//     element.classList.add('active');
+
+//     // 2. Show the Detail Container, Hide Placeholder
+//     document.getElementById('details-placeholder').classList.add('d-none');
+//     const detailsContent = document.getElementById('details-content');
+//     detailsContent.classList.remove('d-none');
+
+//     // 3. Fetch Data
+//     const response = await fetch(`/api/batch-details/${batchId}`);
+//     const logs = await response.json();
+
+//     // 4. Map Data to the UI
+//     const batchData = {
+//         subject: element.querySelector('h6').innerText,
+//         date: element.querySelector('small').innerText,
+//         total: logs.length,
+//         success: logs.filter(l => l.Status === 'Success').length
+//     };
+
+//     const percent = batchData.total > 0 ? Math.round((batchData.success / batchData.total) * 100) : 0;
+
+//     // Update Header and Progress
+//     document.getElementById('detail-subject').innerText = batchData.subject;
+//     document.getElementById('detail-date').innerText = batchData.date;
+//     document.getElementById('detail-percent').innerText = `${percent}%`;
+//     document.getElementById('detail-progress-bar').style.width = `${percent}%`;
+
+//     // Map logs to Table Rows
+//     const logsBody = document.getElementById('logs-body');
+//     logsBody.innerHTML = logs.map(log => `
+//         <tr>
+//             <td class="small fw-bold">${log.RecipientEmail}</td>
+//             <td>
+//                 <span class="badge ${log.Status === 'Success' ? 'status-badge-success' : 'status-badge-failed'} rounded-pill">
+//                     ${log.Status}
+//                 </span>
+//             </td>
+//             <td class="text-muted small">${log.ErrorMessage || 'Delivered successfully'}</td>
+//         </tr>
+//     `).join('');
+// }'
+
 async function loadDetails(batchId, element) {
-    // 1. UI Highlight Toggle
-    document.querySelectorAll('.batch-item').forEach(el => el.classList.remove('active'));
-    element.classList.add('active');
+    try {
+        // 1. UI Highlight Toggle
+        document.querySelectorAll('.batch-item').forEach(el => el.classList.remove('active'));
+        if (element) element.classList.add('active');
 
-    // 2. Show the Detail Container, Hide Placeholder
-    document.getElementById('details-placeholder').classList.add('d-none');
-    const detailsContent = document.getElementById('details-content');
-    detailsContent.classList.remove('d-none');
+        // 2. Show the Detail Container, Hide Placeholder
+        const placeholder = document.getElementById('details-placeholder');
+        const detailsContent = document.getElementById('details-content');
+        
+        if (placeholder) placeholder.classList.add('d-none');
+        if (detailsContent) detailsContent.classList.remove('d-none');
 
-    // 3. Fetch Data
-    const response = await fetch(`/api/batch-details/${batchId}`);
-    const logs = await response.json();
+        // 3. Fetch Data from API
+        console.log(`Fetching logs for Batch #${batchId}...`);
+        const response = await fetch(`/api/batch-details/${batchId}`);
+        const responseData = await response.json();
+        console.log("Logs received from backend array:", responseData);
 
-    // 4. Map Data to the UI
-    const batchData = {
-        subject: element.querySelector('h6').innerText,
-        date: element.querySelector('small').innerText,
-        total: logs.length,
-        success: logs.filter(l => l.Status === 'Success').length
-    };
+        // --- FIXED: Extract the 'details' array from the wrapper object ---
+        let logs = [];
+        if (responseData && Array.isArray(responseData.details)) {
+            logs = responseData.details;
+        } else if (Array.isArray(responseData)) {
+            logs = responseData; // Fallback if backend shifts back to raw array
+        } else {
+            console.error("Data received is not a valid array structure.");
+            return;
+        }
 
-    const percent = batchData.total > 0 ? Math.round((batchData.success / batchData.total) * 100) : 0;
+        // 4. Calculate Success Metrics safely
+        const total = logs.length;
+        const successCount = logs.filter(l => l.Status === 'Success').length;
+        const percent = total > 0 ? Math.round((successCount / total) * 100) : 0;
 
-    // Update Header and Progress
-    document.getElementById('detail-subject').innerText = batchData.subject;
-    document.getElementById('detail-date').innerText = batchData.date;
-    document.getElementById('detail-percent').innerText = `${percent}%`;
-    document.getElementById('detail-progress-bar').style.width = `${percent}%`;
+        // 5. Update Header Texts Safely (Using Optional Chaining)
+        const subjectEl = document.getElementById('detail-subject');
+        const dateEl = document.getElementById('detail-date');
+        const percentEl = document.getElementById('detail-percent');
+        const progressBar = document.getElementById('detail-progress-bar');
 
-    // Map logs to Table Rows
-    const logsBody = document.getElementById('logs-body');
-    logsBody.innerHTML = logs.map(log => `
-        <tr>
-            <td class="small fw-bold">${log.RecipientEmail}</td>
-            <td>
-                <span class="badge ${log.Status === 'Success' ? 'status-badge-success' : 'status-badge-failed'} rounded-pill">
-                    ${log.Status}
-                </span>
-            </td>
-            <td class="text-muted small">${log.ErrorMessage || 'Delivered successfully'}</td>
-        </tr>
-    `).join('');
+        if (subjectEl) subjectEl.innerText = element.querySelector('h6')?.innerText || 'No Subject';
+        if (dateEl) dateEl.innerText = element.querySelector('small')?.innerText || '';
+        if (percentEl) percentEl.innerText = `${percent}%`;
+        if (progressBar) {
+            progressBar.style.width = `${percent}%`;
+            progressBar.className = `progress-bar ${percent === 100 ? 'bg-success' : 'bg-info'}`;
+        }
+
+        // 6. Map Logs to the Table Rows
+        const logsBody = document.getElementById('logs-body');
+        if (logsBody) {
+            if (logs.length === 0) {
+                logsBody.innerHTML = '<tr><td colspan="3" class="text-center text-muted">No recipient logs recorded for this batch.</td></tr>';
+                return;
+            }
+
+            logsBody.innerHTML = logs.map(log => `
+                <tr>
+                    <td class="small fw-bold">${log.RecipientEmail || 'Unknown'}</td>
+                    <td>
+                        <span class="badge ${log.Status === 'Success' ? 'bg-success' : 'bg-danger'} rounded-pill">
+                            ${log.Status || 'Pending'}
+                        </span>
+                    </td>
+                    <td class="text-muted small">${log.Status === 'Success' ? 'Delivered successfully' : (log.ErrorMessage || 'Failed')}</td>
+                </tr>
+            `).join('');
+            console.log("Table body HTML successfully rendered.");
+        } else {
+            console.error("Could not find table body element '#logs-body' in the DOM.");
+        }
+
+    } catch (err) {
+        console.error("Error executing loadDetails configuration loop:", err);
+    }
 }
