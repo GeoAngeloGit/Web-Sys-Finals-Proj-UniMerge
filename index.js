@@ -228,7 +228,7 @@ app.post('/api/init-batch', (req, res) => {
 
 // 2. Send one email and log to batch_details
 app.post('/api/send-single', async (req, res) => {
-    const { batchId, recipient, subject, body, auth, senderName } = req.body;
+    const { batchId, recipient, subject, body, auth, senderName, attachmentFileName, extractDir } = req.body;
     
     try {
         const transporter = nodemailer.createTransport({
@@ -236,11 +236,38 @@ app.post('/api/send-single', async (req, res) => {
             auth: { user: auth.user, pass: auth.pass }
         });
 
+        // Build attachments array if filename is provided
+        const attachments = [];
+        if (attachmentFileName && extractDir) {
+            const filePath = path.join(extractDir, attachmentFileName);
+            console.log(`[DEBUG] Checking attachment: fileName="${attachmentFileName}", extractDir="${extractDir}", fullPath="${filePath}"`);
+            
+            if (fs.existsSync(filePath)) {
+                console.log(`[DEBUG] ✓ File found, attaching: ${filePath}`);
+                attachments.push({
+                    filename: attachmentFileName,
+                    path: filePath
+                });
+            } else {
+                console.log(`[DEBUG] ✗ File NOT found at: ${filePath}`);
+                // List what's in the directory to debug
+                if (fs.existsSync(extractDir)) {
+                    const files = fs.readdirSync(extractDir);
+                    console.log(`[DEBUG] Files in extractDir: ${files.join(', ')}`);
+                } else {
+                    console.log(`[DEBUG] extractDir does NOT exist: ${extractDir}`);
+                }
+            }
+        } else {
+            console.log(`[DEBUG] No attachment requested (fileName="${attachmentFileName}", extractDir="${extractDir}")`);
+        }
+
         await transporter.sendMail({
             from: `"${senderName}" <${auth.user}>`,
             to: recipient,
             subject: subject,
-            html: body
+            html: body,
+            attachments: attachments
         });
 
         // Log SUCCESS to database

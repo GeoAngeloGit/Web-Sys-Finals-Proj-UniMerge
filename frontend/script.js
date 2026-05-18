@@ -575,7 +575,8 @@ async function sendBulkEmails(event) {
             subject: document.getElementById("subjectField").value,
             body: previewBody,
             senderName: document.getElementById("senderName").value,
-            attachmentFileName: row[document.getElementById('attachmentColSelect').value]
+            attachmentFileName: row[document.getElementById('attachmentColSelect').value],
+            extractDir: currentExtractDir
         };
 
         try {
